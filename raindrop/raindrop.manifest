@@ -1,0 +1,27 @@
+# MicroSmart PF - Infrastructure Definition
+# -----------------------------------------
+# This file defines the memory and compute resources for the malaria agent.
+
+application "microsmart-pf" {
+  
+  # 1. The Patient Record System (SmartBucket)
+  # Stores the raw blood smear images and generated PDF reports.
+  # 'embedding_enabled' allows us to semantically search past cases later.
+  bucket "patient-records" {
+    versioning = true
+    embedding_enabled = true 
+  }
+
+  # 2. The Diagnosis API (The Brain)
+  # This service runs your Python code (YOLO + Llama 3.3).
+  service "diagnosis-api" {
+    image = "microsmart-pf:latest"
+    port = 8000
+    
+    # We inject the Cerebras Key securely so the code can "think"
+    env {
+      key = "CEREBRAS_API_KEY"
+      secret = true
+    }
+  }
+}
