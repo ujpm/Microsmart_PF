@@ -10,3 +10,6 @@ python-multipart        # To handle image uploads
 # Data Handling
 numpy
 pillow                  # Image processing
+
+# The Interface
+streamlit
