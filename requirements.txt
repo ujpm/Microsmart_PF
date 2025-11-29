@@ -1,0 +1,12 @@
+# Core AI Frameworks
+ultralytics==8.3.0      # The Eye (YOLOv8)
+cerebras_cloud_sdk      # The Brain (Llama 3.3 via Cerebras)
+
+# Backend API
+fastapi                 # To create the API endpoint
+uvicorn                 # To run the server
+python-multipart        # To handle image uploads
+
+# Data Handling
+numpy
+pillow                  # Image processing
