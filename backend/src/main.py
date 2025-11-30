@@ -9,7 +9,8 @@ Author: MicroSmart Team
 Date: 2025-11-25
 Bridge between Frontend, AI Agents, and LiquidMetal Raindrop Infrastructure.
 """
-
+from dotenv import load_dotenv
+load_dotenv()                   
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from agents.vision import VisionAgent
