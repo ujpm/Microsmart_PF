@@ -10,6 +10,7 @@ python-multipart        # To handle image uploads
 # Data Handling
 numpy
 pillow                  # Image processing
+lm-raindrop
 
 # The Interface
 streamlit
