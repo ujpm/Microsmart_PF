@@ -15,11 +15,17 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Test files
+# Test & Temp files
 test_*.py
 test_*.jpg
 test_*.png
 test_*.jpeg
+temp_*.jpg
+temp_*.png
+temp_*.jpeg
+*_temp.jpg
+*_temp.png
+*_temp.jpeg
 
 # Python
 __pycache__/
