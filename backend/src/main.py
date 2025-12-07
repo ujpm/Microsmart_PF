@@ -1,91 +1,83 @@
 """
 MicroSmart PF - Backend API
 ---------------------------
-This FastAPI application serves as the bridge between the React frontend
-and the AI agents. It handles image uploads, runs the vision pipeline,
-and queries the reasoning engine.
-
-Author: MicroSmart Team
-Date: 2025-11-25
-Bridge between Frontend, AI Agents, and LiquidMetal Raindrop Infrastructure.
+This is the FastAPI server. It receives requests from the Frontend
+and delegates work to the Vision and Brain agents.
 """
 
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv  
+load_dotenv()                  
+from src.agents.vision import VisionAgent
+from src.agents.brain import BrainAgent
+# --------------------------
+import shutil
+import os
 import logging
-from typing import Dict, Any
-from ultralytics import YOLO
 
-# Configure logging
+# Initialize Logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("MicroSmartAPI")
 
-class VisionAgent:
+app = FastAPI(title="MicroSmart PF API", version="1.1.0")
+
+# Enable CORS so your React frontend can talk to this backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Global Agents
+vision_bot = None
+brain_bot = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the AI agents when the server starts."""
+    global vision_bot, brain_bot
+    # We load the model once here, instead of reloading it for every request
+    if os.path.exists("models/best.pt"):
+        vision_bot = VisionAgent(model_path="models/best.pt")
+        brain_bot = BrainAgent()
+        logger.info("✅ Vision and Brain Agents are online.")
+    else:
+        logger.warning("⚠️ Model not found. Vision features will be disabled.")
+
+@app.post("/analyze")
+async def analyze_sample(file: UploadFile = File(...)):
     """
-    Orchestrates the loading of the YOLO model and running inference on blood smears.
+    1. Receives image from Frontend
+    2. Sends to Vision Agent -> Gets counts + bounding box image
+    3. Sends counts to Brain Agent -> Gets medical report
+    4. Returns everything to Frontend
     """
+    if not vision_bot:
+        raise HTTPException(status_code=503, detail="AI System is initializing...")
+    
+    # Save the uploaded file temporarily so YOLO can read it
+    temp_filename = f"temp_{file.filename}"
+    with open(temp_filename, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
-    def __init__(self, model_path: str = "models/best.pt"):
-        """
-        Initializes the Vision Agent.
-        """
-        try:
-            logger.info(f"Loading Vision Model from: {model_path}")
-            self.model = YOLO(model_path)
-        except Exception as e:
-            logger.error(f"Failed to load YOLO model: {e}")
-            raise
-
-    def analyze_image(self, image_path: str) -> Dict[str, Any]:
-        """
-        Performs inference on a single image and calculates cell statistics.
-        """
-        logger.info(f"Running inference on: {image_path}")
+    try:
+        # Run the pipeline
+        vision_results = vision_bot.analyze_image(temp_filename)
+        clinical_report = brain_bot.generate_report(vision_results)
         
-        # Run inference 
-        # conf=0.25 is a standard baseline for YOLOv8
-        results = self.model.predict(image_path, conf=0.25, verbose=False)
-        result = results[0]
-
-        # Initialize counters
-        counts = {
-            "Red_Blood_Cell": 0,
-            "Leukocyte": 0,
-            "Ring": 0,
-            "Trophozoite": 0,
-            "Gametocyte": 0,
-            "Schizont": 0
+        return {
+            "analysis": vision_results,
+            "report": clinical_report
         }
-
-        # Update counts based on detections
-        for box in result.boxes:
-            class_id = int(box.cls[0])
-            class_name = self.model.names[class_id]
-            
-            if class_name in counts:
-                counts[class_name] += 1
-            else:
-                counts[class_name] = counts.get(class_name, 0) + 1
-
-        # --- FIX FOR DIVISION BY ZERO ---
-        # If no RBCs are found, we assume 1 to prevent crash (parasitemia will be >100% effectively)
-        total_rbc = max(counts["Red_Blood_Cell"], 1)
-        
-        total_parasites = (
-            counts["Ring"] + 
-            counts["Trophozoite"] + 
-            counts["Gametocyte"] + 
-            counts["Schizont"]
-        )
-        
-        parasitemia = (total_parasites / total_rbc) * 100
-
-        analysis_report = {
-            "counts": counts,
-            "parasitemia_pct": round(parasitemia, 2),
-            "image_metadata": {
-                "height": result.orig_shape[0],
-                "width": result.orig_shape[1]
-            }
-        }
-
-        logger.info(f"Analysis Complete: Parasitemia {parasitemia:.2f}% (RBCs: {counts['Red_Blood_Cell']})")
-        return analysis_report
+    
+    except Exception as e:
+        logger.error(f"Pipeline Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    finally:
+        # Clean up the temp file
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
