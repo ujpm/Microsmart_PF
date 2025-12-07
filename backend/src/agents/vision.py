@@ -4,10 +4,12 @@ MicroSmart PF - Vision Agent
 This module handles the computer vision tasks for the malaria diagnosis system.
 It utilizes a YOLOv8 model to detect and quantify malaria parasites and blood cells
 in microscopic images.
-
 """
 
 import logging
+import base64
+import cv2
+import numpy as np
 from typing import Dict, Any
 from ultralytics import YOLO
 
@@ -37,13 +39,7 @@ class VisionAgent:
     def analyze_image(self, image_path: str) -> Dict[str, Any]:
         """
         Performs inference on a single image and calculates cell statistics.
-
-        Args:
-            image_path (str): File path to the blood smear image.
-
-        Returns:
-            Dict[str, Any]: A structured report containing counts of detected classes
-                            (e.g., RBC, WBC, Rings, Trophozoites) and raw detection data.
+        Returns a structured report and a Base64 encoded annotated image.
         """
         logger.info(f"Running inference on: {image_path}")
         
@@ -51,7 +47,18 @@ class VisionAgent:
         results = self.model.predict(image_path, conf=0.4, verbose=False)
         result = results[0] # Process the first image
 
-        # Initialize counters for all known classes in the dataset
+        # --- 1. Generate Annotated Image (The Visuals) ---
+        # Plot the detections (draws boxes on the image)
+        annotated_bgr = result.plot() 
+        # Convert BGR (OpenCV default) to RGB for web display
+        annotated_rgb = cv2.cvtColor(annotated_bgr, cv2.COLOR_BGR2RGB)
+        # Encode to JPEG in memory
+        _, buffer = cv2.imencode('.jpg', cv2.cvtColor(annotated_rgb, cv2.COLOR_RGB2BGR))
+        # Convert to Base64 string for the frontend
+        img_base64 = base64.b64encode(buffer).decode('utf-8')
+
+        # --- 2. Count Cells (The Data) ---
+        # Initialize counters for all known classes
         counts = {
             "Red_Blood_Cell": 0,
             "Leukocyte": 0,
@@ -66,23 +73,24 @@ class VisionAgent:
             class_id = int(box.cls[0])
             class_name = self.model.names[class_id]
             
-            # Map dataset specific names to standardized keys if necessary
-            # Assuming dataset uses standard names; add mapping logic here if needed
             if class_name in counts:
                 counts[class_name] += 1
             else:
-                # Log unexpected classes for debugging
                 counts[class_name] = counts.get(class_name, 0) + 1
 
-        # Calculate preliminary Parasitemia (Percentage of infected cells)
-        # Formula: (Infected Cells / Total RBCs) * 100
-        total_rbc = counts.get("Red_Blood_Cell", 1) # Avoid division by zero
+        # --- 3. Calculate Parasitemia (The Math) ---
+        # FIX: Explicitly handle the 0 case. 
+        # .get() fails here because the key exists but is 0.
+        rbc_count = counts["Red_Blood_Cell"]
+        total_rbc = rbc_count if rbc_count > 0 else 1 
+
         total_parasites = counts["Ring"] + counts["Trophozoite"] + counts["Gametocyte"] + counts["Schizont"]
         parasitemia = (total_parasites / total_rbc) * 100
 
         analysis_report = {
             "counts": counts,
             "parasitemia_pct": round(parasitemia, 2),
+            "annotated_image": img_base64,  # Return the visualized scan
             "image_metadata": {
                 "height": result.orig_shape[0],
                 "width": result.orig_shape[1]

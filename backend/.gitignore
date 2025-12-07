@@ -1,1 +1,2 @@
-.env
+# Backend-specific ignores (root .gitignore covers most)
+# Add backend-only patterns here if needed
