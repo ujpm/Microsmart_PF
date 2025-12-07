@@ -106,17 +106,6 @@ graph LR
 
 ---
 
-## 🏆 Optional Polish Ideas
-
-- Add CI steps to lint TypeScript and run Python unit tests.
-- Add `CONTRIBUTING.md` and `LICENSE` files for open source best practices.
-- Add a full technical deep dive in `/documentation` (API contract, agent logic, deployment notes).
-- Add more badges (build status, coverage, license) if you set up CI/CD.
-- Add screenshots or GIFs of the UI and annotated images.
-- Add links to dataset and model training scripts.
-
----
-
 ## 📜 License
 
 This project is open source under the MIT License. See `LICENSE` for details.
