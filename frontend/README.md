@@ -1,73 +1,122 @@
-# React + TypeScript + Vite
+# MicroSmart PF
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 💡 The Solution
 
-Currently, two official plugins are available:
+MicroSmart PF uses a **Tri-Agent Architecture** to replicate a pathologist's workflow:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **👁️ The Eye (Vision Agent)**: A YOLOv8 model acts as the primary screener, detecting cells and drawing bounding boxes to "show its work."
+- **🧠 The Brain (Reasoning Agent)**: The Cerebras Inference API (Llama 3.3) interprets counts and produces a WHO-compliant clinical report.
+- **🖥️ The Body (Frontend)**: A React-based dashboard visualizes the Eye's findings (bounding boxes) and the Brain's diagnosis side-by-side.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 Tech Stack
 
-## Expanding the ESLint configuration
+**Frontend**  
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org) [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev) [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+**Backend & AI**  
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com) [![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-FF6D00?style=for-the-badge)](https://github.com/ultralytics/ultralytics) [![Cerebras](https://img.shields.io/badge/Cerebras-Llama3.3-000000?style=for-the-badge)](https://www.cerebras.net)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 🛠️ Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1️⃣ Clone & Setup
+```bash
+git clone https://github.com/ujpm/microsmart_pf.git
+cd microsmart_pf
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2️⃣ Backend (The Brain)
+Create a `.env` file in `backend/` with your API key (example, DO NOT commit this file):
+```env
+CEREBRAS_API_KEY="csk-REPLACE_WITH_YOUR_KEY"
 ```
+
+Then install and run:
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+> Note: the server loads the Vision model at startup by default. If model loading is slow, consider lazy-loading or using the FastAPI startup event to preload models.
+
+### 3️⃣ Frontend (The Body)
+Open a new terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Visit: `http://localhost:5173`
+
+---
+
+## 📄 API (short)
+
+### POST /analyze
+- Accepts: `multipart/form-data` with field `file` (image/jpeg|png)
+- Response example:
+```json
+{
+  "analysis": {
+    "counts": {
+      "Red_Blood_Cell": 120,
+      "Trophozoite": 5
+    },
+    "parasitemia_pct": 4.16,
+    "annotated_image": "base64-encoded-jpeg-string"
+  },
+  "report": "Based on the elevated trophozoite count ... (markdown text)"
+}
+```
+
+Implementation notes:
+- Vision Agent returns counts and an `annotated_image` (base64 JPG) for immediate preview.
+- Parasitemia calculation includes safe-division logic to avoid crashes when RBC count is zero.
+
+---
+
+## 🧾 Troubleshooting
+
+- **ModuleNotFoundError: No module named 'src'**
+  - Ensure you run uvicorn from the backend/ root directory, not inside src/.
+  - Correct Command: `python -m uvicorn src.main:app --reload`
+- **Attribute 'app' not found**
+  - This occurs if src/main.py is missing the `app = FastAPI()` definition. Ensure the entry point defines the application instance.
+
+---
+
+## 🗺️ Architecture Diagram
+
+```mermaid
+graph LR
+    User[Lab Tech] -->|Uploads Image| Frontend[React App]
+    Frontend -->|POST /analyze| Backend[FastAPI]
+    subgraph "AI Core"
+        Backend -->|Raw Image| Vision[YOLOv8 Vision Agent]
+        Vision -->|Counts & Bounding Boxes| Backend
+        Backend -->|JSON Data| Brain[Cerebras Agent]
+        Brain -->|Clinical Report| Backend
+    end
+    Backend -->| annotated_image + report | Frontend
+```
+
+---
+
+## 🏆 Optional Polish Ideas
+
+- Add CI steps to lint TypeScript and run Python unit tests.
+- Add `CONTRIBUTING.md` and `LICENSE` files for open source best practices.
+- Add a full technical deep dive in `/documentation` (API contract, agent logic, deployment notes).
+- Add more badges (build status, coverage, license) if you set up CI/CD.
+- Add screenshots or GIFs of the UI and annotated images.
+- Add links to dataset and model training scripts.
+
+---
+
+## 📜 License
+
+This project is open source under the MIT License. See `LICENSE` for details.
