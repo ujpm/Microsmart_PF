@@ -1,48 +1,53 @@
 import { useState } from 'react';
 
-export interface VisionData {
-  counts: Record<string, number>;
-  parasitemia_pct: number;
-  annotated_image?: string;
-}
+// Vite requires VITE_ prefix for environment variables to be accessible in the browser.
+// In Codespaces, this must be the full HTTPS URL from your Ports tab.
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export interface DiagnosisResult {
-  analysis: VisionData;
-  report: string;
-}
-
-export function useAnalysis() {
+export const useAnalysis = () => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<DiagnosisResult | null>(null);
+  const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Sends the blood smear image to the backend for AI analysis.
+   */
   const analyze = async (file: File) => {
     setLoading(true);
     setError(null);
-    
+
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-      const response = await fetch(`${apiUrl}/analyze`, {
+      console.log(`Connecting to: ${API_URL}/analyze`);
+      
+      const response = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Analysis Failed");
-      
+      if (!response.ok) {
+        // Capture specific backend errors (like model missing or API keys failing)
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Analysis failed');
+      }
+
       const data = await response.json();
-      setResult(data);
-      return data; // Return data so the caller can use it (e.g., to update preview)
-    } catch (err) {
-      setError("Error processing sample.");
-      console.error(err);
-      return null;
+      setResults(data);
+    } catch (err: any) {
+      console.error('Frontend Fetch Error:', err);
+      setError(err.message || 'Connection refused. Check if the backend is running and public.');
     } finally {
       setLoading(false);
     }
   };
 
-  return { analyze, result, loading, error, reset: () => setResult(null) };
-}
+  const reset = () => {
+    setResults(null);
+    setError(null);
+  };
+
+  // Return function as 'analyze' to match your App.tsx handleAnalyzeClick call.
+  return { analyze, loading, results, error, reset };
+};

@@ -12,19 +12,11 @@ import logging
 from typing import Dict
 from cerebras.cloud.sdk import Cerebras
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class BrainAgent:
-    """
-    Manages communication with the Large Language Model to generate medical reports.
-    """
-
     def __init__(self):
-        """
-        Initializes the Brain Agent and verifies API credentials.
-        """
         api_key = os.environ.get("CEREBRAS_API_KEY")
         if not api_key:
             logger.error("CEREBRAS_API_KEY environment variable is not set.")
@@ -34,32 +26,24 @@ class BrainAgent:
         self.model_id = "llama-3.3-70b"
 
     def generate_report(self, vision_data: Dict) -> str:
-        """
-        Generates a text-based medical assessment based on vision analysis data.
-
-        Args:
-            vision_data (Dict): The output dictionary from VisionAgent.analyze_image().
-
-        Returns:
-            str: A natural language markdown report explaining the findings.
-        """
         counts = vision_data['counts']
         parasitemia = vision_data['parasitemia_pct']
+        total_parasites = counts['Ring'] + counts['Trophozoite'] + counts['Gametocyte'] + counts['Schizont']
 
-        # Construct the System Prompt (The Persona)
+        # CLINICAL CONTEXT: Rwandan National Malaria Guidelines focus
         system_prompt = (
-            "You are an expert Hematopathologist assisting a lab technician in Rwanda. "
-            "Analyze the provided cell counts from a blood smear. "
-            "Your output must be professional, concise, and actionable. "
-            "Follow WHO guidelines for malaria severity classification."
+            "You are an expert Malariologist at a District Hospital in Rwanda. "
+            "Your goal is maximum sensitivity. If any parasites are detected, you must report a positive case. "
+            "P. falciparum is the most common and dangerous species in the region. "
+            "Provide professional, concise, and actionable diagnosis following WHO and Rwandan guidelines."
         )
 
-        # Construct the User Prompt (The Data)
         user_prompt = f"""
-        Microscopic Analysis Report:
-        - Parasitemia Level: {parasitemia}%
+        LABORATORY DATA:
+        - Total Parasites Detected: {total_parasites}
+        - Computed Parasitemia: {parasitemia}%
         
-        Detailed Counts:
+        CELL BREAKDOWN:
         - Red Blood Cells (RBC): {counts.get('Red_Blood_Cell', 0)}
         - White Blood Cells (WBC): {counts.get('Leukocyte', 0)}
         - Ring Stages: {counts.get('Ring', 0)}
@@ -67,26 +51,26 @@ class BrainAgent:
         - Gametocytes: {counts.get('Gametocyte', 0)}
         - Schizonts: {counts.get('Schizont', 0)}
 
-        Please provide:
-        1. **Diagnosis**: Positive/Negative for Malaria and species likelihood based on stages present (e.g., Rings vs Gametocytes).
-        2. **Severity Assessment**: Is this Uncomplicated or Severe malaria? (Reference: >5% parasitemia is typically severe).
-        3. **Clinical Recommendation**: Suggested next steps or treatment protocol (e.g., Coartem vs IV Artesunate).
-        4. **Quality Control**: Comment on the WBC count if relevant to immune response.
+        TASK:
+        1. **Final Diagnosis**: Is this Positive for Malaria? (Even 1 Ring stage is a Positive). Specify species likelihood (primarily P. falciparum).
+        2. **Severity Classification**: (Uncomplicated vs Severe). Note: Any neurological signs or >5% parasitemia indicate severe malaria in Rwanda.
+        3. **Rwandan Protocol**: If positive, suggest Artemether-Lumefantrine (Coartem) for uncomplicated or IV Artesunate for severe cases.
+        4. **Laboratory Note**: If parasite count is low (<0.1%), advise a second smear for confirmation.
         """
 
         try:
-            logger.info("Sending data to Cerebras Inference API...")
+            logger.info("Generating Clinical Report via Cerebras...")
             response = self.client.chat.completions.create(
                 model=self.model_id,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.2,  # Low temperature for factual consistency
-                max_tokens=500
+                temperature=0.1, # Keep it extremely factual
+                max_tokens=600
             )
             return response.choices[0].message.content
         
         except Exception as e:
-            logger.error(f"Inference failed: {e}")
-            return "Error: Unable to generate medical report due to API failure."
+            logger.error(f"Brain Agent Failure: {e}")
+            return "Error: Clinical reasoning engine offline."
