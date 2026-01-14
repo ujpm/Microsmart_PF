@@ -1,5 +1,5 @@
 import React from 'react';
-import { UploadCloud } from 'lucide-react';
+import { Upload, Play, Microscope } from 'lucide-react';
 
 interface UploadZoneProps {
   onFileSelect: (file: File) => void;
@@ -16,61 +16,68 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   previewUrl, 
   loading 
 }) => {
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onFileSelect(e.target.files[0]);
-    }
-  };
-
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-full">
-      <h2 className="text-lg font-semibold text-medical-900 mb-4 flex items-center">
-        <UploadCloud className="mr-2" size={20} />
-        Sample Acquisition
-      </h2>
-
-      {/* Drop Zone */}
-      <div className="border-2 border-dashed border-medical-200 rounded-xl p-8 text-center hover:bg-medical-50 transition-colors relative min-h-[200px] flex flex-col justify-center">
-        <input 
-          type="file" 
-          onChange={handleChange} 
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          accept="image/*"
-        />
-        {previewUrl ? (
-          <img 
-            src={previewUrl} 
-            alt="Blood Smear" 
-            className="max-h-64 mx-auto rounded-md shadow-md object-contain relative z-20 pointer-events-none" 
-          />
-        ) : (
-          <div className="text-slate-400">
-            <p>Drag & drop blood smear image here</p>
-            <p className="text-xs mt-2">Supports JPG, PNG (Giemsa Stain)</p>
-          </div>
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-bold text-slate-800 flex items-center">
+          <Microscope className="mr-2 text-blue-600" size={20} />
+          Sample Acquisition
+        </h2>
+        {file && !loading && (
+          <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
+            IMAGE READY
+          </span>
         )}
       </div>
 
-      {/* Action Button */}
+      <div className="relative group transition-all">
+        <input
+          type="file"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+          onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
+          disabled={loading}
+        />
+        
+        <div className={`
+          border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all
+          ${previewUrl ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200 bg-slate-50 hover:border-blue-400'}
+          ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+        `}>
+          {previewUrl ? (
+            <img src={previewUrl} alt="Preview" className="max-h-64 rounded-lg shadow-md" />
+          ) : (
+            <>
+              <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                <Upload className="text-blue-600" size={32} />
+              </div>
+              <p className="text-slate-600 font-medium">Upload Thin Smear Image</p>
+              <p className="text-slate-400 text-xs mt-1">Supports JPG, PNG (Max 10MB)</p>
+            </>
+          )}
+        </div>
+      </div>
+
       <button
         onClick={onAnalyze}
         disabled={!file || loading}
-        className={`w-full mt-6 py-3 rounded-lg font-semibold text-white transition-all flex justify-center items-center ${
-          !file || loading 
-            ? 'bg-slate-300 cursor-not-allowed' 
-            : 'bg-medical-600 hover:bg-medical-700 shadow-md hover:shadow-lg'
-        }`}
+        className={`
+          w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center transition-all
+          ${!file || loading 
+            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100 active:scale-[0.98]'}
+        `}
       >
         {loading ? (
           <>
-            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Processing Swarm...
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+            Agents Collaborating...
           </>
-        ) : "Run Diagnostics"}
+        ) : (
+          <>
+            <Play className="mr-2" size={18} fill="currentColor" />
+            Start Research Analysis
+          </>
+        )}
       </button>
     </div>
   );
