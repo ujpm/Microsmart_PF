@@ -20,7 +20,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onHomeClick, onAnalysisClick }) 
             </div>
             <div className="ml-3">
               <span className="text-xl font-bold text-slate-900 block leading-none">MicroSmart</span>
-              <span className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Family of Agents</span>
+              <span className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">PF Agent</span>
             </div>
           </div>
 
@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onHomeClick, onAnalysisClick }) 
               onClick={onHomeClick}
               className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
             >
-              Project Overview
+              Home
             </button>
             <button 
               onClick={onAnalysisClick}

@@ -14,20 +14,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <section className="py-20 bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="inline-flex items-center bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold mb-6">
-            BETA VERSION 1.1.0
+            BETA V 1.1.0
           </div>
           <h1 className="text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
-            Autonomous Multi-Agent <br /><span className="text-blue-600">Parasite Analysis</span>
+            Making Microscope more smarter <br /><span className="text-blue-600">P. Falciparum specialized agent</span>
           </h1>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10">
-            MicroSmart PF is a research-focused autonomous agent designed to identify 
-            <em> Plasmodium falciparum</em> using a collaborative AI architecture.
+            MicroSmart PF is an autonomous agent designed to identify Malaria, specifically
+            <em> P. falciparum & P. vivax</em> using a collaborative AI architecture.
           </p>
           <button 
             onClick={onStart}
             className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all flex items-center mx-auto shadow-lg shadow-blue-200"
           >
-            Start Research Analysis <ArrowRight className="ml-2" />
+            Try it live<ArrowRight className="ml-2" />
+          </button>
+        </div>
+      </section>
+
+      {/* Call to Action Section */}
+      <section className="py-12 bg-white border-t border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">Explore the Microsmart Complex</h2>
+          <p className="text-lg text-slate-600 mb-8">
+            Discover more about our suite of AI-powered tools designed to enhance microscopy workflows.
+          </p>
+          <button 
+            onClick={() => window.open('https://microsmart-complex.uwizeyimanajp2.workers.dev/', '_blank')}
+            className="bg-green-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition-all flex items-center mx-auto shadow-lg shadow-green-200"
+          >
+            Visit the family website<ArrowRight className="ml-2" />
           </button>
         </div>
       </section>
@@ -70,7 +86,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <p className="text-slate-600 text-lg leading-relaxed">
               The raw data from The Eye is passed to "The Brain"—an autonomous reasoning agent 
               powered by Llama 3.3 via the Cerebras platform. It interprets cell counts and 
-              morphology to provide a comprehensive research assessment following standardized guidelines.
+              morphology to provide a comprehensive assessment following standardized guidelines.
             </p>
           </div>
         </div>
