@@ -1,14 +1,19 @@
 import React from 'react';
 import { Microscope } from 'lucide-react';
 
-export const Header: React.FC = () => (
-  <header className="bg-white border-b border-medical-100 px-6 py-4 flex items-center shadow-sm">
-    <div className="bg-medical-500 p-2 rounded-lg text-white mr-3">
-      <Microscope size={24} />
+export const Header: React.FC = () => {
+  return (
+    <div className="col-span-full mb-2">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-1 bg-blue-600 rounded-full" />
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">PF-Agent Analysis Lab</h1>
+          <p className="text-sm text-slate-500 flex items-center">
+            <Microscope size={14} className="mr-1.5" />
+            Active Research Session: Parasite Morphology & Quantification
+          </p>
+        </div>
+      </div>
     </div>
-    <div>
-      <h1 className="text-xl font-bold text-medical-900">MicroSmart PF</h1>
-      <p className="text-xs text-slate-500 font-medium tracking-wider">AUTONOMOUS MALARIA AGENT</p>
-    </div>
-  </header>
-);
+  );
+};
