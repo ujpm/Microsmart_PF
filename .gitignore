@@ -82,3 +82,4 @@ lerna-debug.log*
 *.ntvs*
 *.njsproj
 *.sln
+.devcontainer/
