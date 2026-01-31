@@ -20,7 +20,7 @@ class VisionAgent:
 
     def analyze_image(self, image_path: str, file_id: str):
         # 1. Inference
-        results = self.model.predict(image_path, conf=0.25, verbose=False)
+        results = self.model.predict(image_path, conf=0.15, verbose=False)
         result = results[0]
         
         # 2. Dynamic Font Scaling Logic
@@ -28,6 +28,8 @@ class VisionAgent:
         # Calculate scale: 1500px -> 0.5, 3000px -> 1.0
         font_scale = max(w, h) / config.BASE_IMAGE_SIZE * config.BASE_FONT_SCALE
         font_scale = max(font_scale, 0.4) # Never go below 0.4
+        thickness = max(1, int(font_scale * 2))
+        font_scale = font_scale * 2.5 
         thickness = max(1, int(font_scale * 2))
 
         # 3. Process Detections
