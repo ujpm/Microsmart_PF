@@ -1,20 +1,22 @@
 import React from 'react';
 import { Eye, Brain, ArrowRight, Activity, Microscope } from 'lucide-react';
+import { Footer } from './Footer';
 
 interface LandingPageProps {
   onStart: () => void;
+  children?: React.ReactNode; // FIX: Added children prop
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, children }) => {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col relative overflow-hidden custom-scrollbar">
       
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none" />
 
-      {/* Navbar (Static for Landing) */}
-      <nav className="flex items-center justify-between px-8 py-6 z-10">
+      {/* Navbar */}
+      <nav className="flex items-center justify-between px-8 py-6 z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center font-bold text-slate-950">MS</div>
           <span className="text-xl font-bold tracking-tight">MICROSMART <span className="text-cyan-400">PF</span></span>
@@ -23,7 +25,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </nav>
 
       {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 z-10 -mt-20">
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 z-10 py-20">
         
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-cyan-400 text-xs font-bold mb-8 animate-fade-in-up">
           <Activity size={14} />
@@ -52,8 +54,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </span>
         </button>
 
-        {/* Feature Grid (The "Sophisticated" Preview) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20 max-w-5xl w-full animate-fade-in-up [animation-delay:500ms]">
+        {/* Feature Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-20 mb-20 max-w-5xl w-full animate-fade-in-up [animation-delay:500ms]">
           {[
             { 
               icon: <Eye className="text-cyan-400" />, 
@@ -80,7 +82,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </div>
           ))}
         </div>
+
+        {/* FIX: Render Children (UploadZone) HERE, before Footer */}
+        {children && (
+          <div className="w-full animate-fade-in-up [animation-delay:600ms]">
+            {children}
+          </div>
+        )}
+
       </main>
+
+      <Footer />
     </div>
   );
 };

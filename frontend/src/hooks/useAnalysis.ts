@@ -8,9 +8,11 @@ export interface VisionResult {
     status: string;
     value: string;
     rbc_count: number;
+    note?: string; // Added from backend update
   };
   detailed_counts: Record<string, number>;
-  annotated_image: string; // Base64
+  image_url: string; // FIX: Changed from annotated_image (Base64) to URL
+  image_metadata?: { width: number; height: number };
 }
 
 export interface SessionItem {
@@ -37,7 +39,14 @@ export const useAnalysis = () => {
     items.forEach(item => {
       if (item.result) {
         totalP += item.result.total_parasites;
-        totalRBC += item.result.parasitemia_calculation.rbc_count;
+        // Check if rbc_count exists (it might be in 'rbc_used' or 'rbc_detected' depending on backend version, 
+        // but let's stick to the structure we saw in Step 1)
+        // In Step 1 backend: rbc_used, rbc_detected. Let's safeguard.
+        // For aggregation, we just need a rough estimate or we rely on backend "diagnose" endpoint completely.
+        // We will sum the "effective" RBCs if available.
+        const rbc = (item.result.parasitemia_calculation as any).rbc_used || item.result.parasitemia_calculation.rbc_count || 0;
+        totalRBC += rbc;
+
         Object.entries(item.result.detailed_counts).forEach(([key, val]) => {
           if (counts[key] !== undefined) counts[key] += val;
         });
@@ -46,7 +55,7 @@ export const useAnalysis = () => {
 
     let pct = "N/A";
     if (totalRBC > 0) {
-      pct = ((totalP / (totalRBC + totalP)) * 100).toFixed(2) + "%";
+      pct = ((totalP / totalRBC) * 100).toFixed(2) + "%";
     }
 
     return { totalP, pct, counts };
@@ -58,7 +67,7 @@ export const useAnalysis = () => {
     
     // 1. Initialize Session
     const newSession: SessionItem[] = files.map((f, idx) => ({
-      id: `slide-${idx}`,
+      id: `slide-${Date.now()}-${idx}`,
       status: 'pending',
       originalFile: f,
       result: null

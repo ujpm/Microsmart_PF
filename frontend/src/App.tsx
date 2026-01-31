@@ -8,6 +8,7 @@ import { Filmstrip } from './components/Filmstrip';
 import { SmartViewer } from './components/SmartViewer';
 import { BrainConsole } from './components/BrainConsole';
 import { SessionHUD } from './components/SessionHUD';
+import { Footer } from './components/Footer'; // IMPORTED
 
 // Icons
 import { 
@@ -29,8 +30,12 @@ function App() {
 
   // --- HANDLERS ---
   const handleStartSession = () => {
-    // Trigger the hidden upload input programmatically
-    document.getElementById('upload-trigger')?.click();
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) {
+      uploadSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      document.getElementById('upload-trigger')?.click();
+    }
   };
 
   const handleFiles = (files: File[]) => {
@@ -42,7 +47,7 @@ function App() {
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-inter selection:bg-cyan-500/30">
       
-      {/* 1. TOP BAR (Minimalist Status Bar) */}
+      {/* 1. TOP BAR */}
       <header className="h-10 bg-slate-950 border-b border-slate-800 flex items-center px-4 justify-between shrink-0 z-50">
          <div className="flex items-center gap-2 text-sm font-bold tracking-wider text-slate-400">
             <Microscope size={16} className="text-cyan-500"/>
@@ -63,14 +68,16 @@ function App() {
       {session.length === 0 ? (
         // STATE A: ENTRY (Landing + Upload)
         <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-           {/* If user hasn't uploaded, show Landing. 
-               We can overlay the UploadZone modal or just scroll to it. 
-               For this UX, let's keep it simple: Landing Page contains the trigger. 
-           */}
-           {/* Replace the inline arrow function with our handler */}
-           <LandingPage onStart={handleStartSession} />
            
-           {/* Hidden Input for Landing Page Button */}
+           <LandingPage onStart={handleStartSession}>
+             <div id="upload-section" className="max-w-4xl mx-auto px-4 pb-20 pt-10 border-t border-slate-800/50">
+               <div className="flex items-center gap-4 mb-8 justify-center">
+                 <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Initialization Protocol</span>
+               </div>
+               <UploadZone onFilesSelected={handleFiles} />
+             </div>
+           </LandingPage>
+           
            <input 
              id="upload-trigger" 
              type="file" 
@@ -79,16 +86,6 @@ function App() {
              onChange={(e) => e.target.files && handleFiles(Array.from(e.target.files))}
              accept="image/*"
            />
-           
-           {/* Alternative: A dedicated Upload Screen if they clicked "Initialize" */}
-           <div className="max-w-4xl mx-auto px-4 pb-20">
-             <div className="flex items-center gap-4 mb-8">
-               <div className="h-px bg-slate-800 flex-1" />
-               <span className="text-slate-500 text-xs font-bold uppercase">OR</span>
-               <div className="h-px bg-slate-800 flex-1" />
-             </div>
-             <UploadZone onFilesSelected={handleFiles} />
-           </div>
         </div>
       ) : (
         // STATE B: ACTIVE WORKBENCH
@@ -100,7 +97,7 @@ function App() {
           {/* 3-Column Workspace */}
           <div className="flex-1 flex overflow-hidden relative">
             
-            {/* COL 1: FILMSTRIP (Left) */}
+            {/* COL 1: FILMSTRIP */}
             <div className={`
                 ${leftOpen ? 'w-64' : 'w-0'} 
                 bg-slate-900 border-r border-slate-800 transition-all duration-300 ease-in-out relative flex flex-col shrink-0
@@ -110,10 +107,10 @@ function App() {
                </div>
             </div>
 
-            {/* COL 2: MAIN STAGE (Center) */}
+            {/* COL 2: MAIN STAGE */}
             <div className="flex-1 flex flex-col relative bg-black min-w-0 z-0">
                
-               {/* Layout Toggles (Floating) */}
+               {/* Layout Toggles */}
                <div className="absolute top-4 left-4 z-30 flex gap-2 group">
                   <button 
                     onClick={() => setLeftOpen(!leftOpen)} 
@@ -134,11 +131,10 @@ function App() {
                   </button>
                </div>
 
-               {/* The Image Viewer */}
                <SmartViewer activeSlide={activeSlide} />
             </div>
 
-            {/* COL 3: BRAIN CONSOLE (Right) */}
+            {/* COL 3: BRAIN CONSOLE */}
             <div className={`
                 ${rightOpen ? 'w-[400px]' : 'w-0'} 
                 bg-slate-900 border-l border-slate-800 transition-all duration-300 ease-in-out relative flex flex-col shrink-0
@@ -154,6 +150,9 @@ function App() {
             </div>
 
           </div>
+
+          {/* ADDED: Compact Footer for Workbench */}
+          <Footer compact />
         </div>
       )}
     </div>

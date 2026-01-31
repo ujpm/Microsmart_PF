@@ -111,7 +111,7 @@ export const BrainConsole: React.FC<BrainConsoleProps> = ({
             className="w-full py-3 bg-cyan-900/30 hover:bg-cyan-900/50 border border-cyan-900/50 text-cyan-400 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <MessageSquare size={16} />
-            Consult Dr. AI
+            Consult Brain Agent
           </button>
         ) : (
           <div className="animate-fade-in-up">
