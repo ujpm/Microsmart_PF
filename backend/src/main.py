@@ -4,29 +4,27 @@ MicroSmart PF - Backend API
 This is the FastAPI server. It receives requests from the Frontend
 and delegates work to the Vision and Brain agents.
 """
-
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv  
-load_dotenv()                  
-from src.agents.vision import VisionAgent
-from src.agents.brain import BrainAgent
-# --------------------------
 import shutil
 import os
 import logging
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
+from dotenv import load_dotenv
 
-# Initialize Logging
+# Load environment variables from .env file
+load_dotenv() 
+
+from src.agents.vision import VisionAgent
+from src.agents.brain import BrainAgent
+
+# Configure Logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("MicroSmartAPI")
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="MicroSmart PF API", version="1.1.0")
+app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"message": "MicroSmart PF Backend is Running!", "status": "OK"}
-
-# Enable CORS so your React frontend can talk to this backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,53 +33,96 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Agents
+# --- Global Agent Variables ---
 vision_bot = None
 brain_bot = None
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the AI agents when the server starts."""
-    global vision_bot, brain_bot
-    # We load the model once here, instead of reloading it for every request
-    if os.path.exists("models/best.pt"):
-        vision_bot = VisionAgent(model_path="models/best.pt")
-        brain_bot = BrainAgent()
-        logger.info("✅ Vision and Brain Agents are online.")
+# Initialize Agents
+try:
+    logger.info("Initializing Agents...")
+    vision_bot = VisionAgent()
+    logger.info("✅ Vision Agent Ready")
+except Exception as e:
+    logger.error(f"❌ Vision Agent Failed: {e}")
+
+try:
+    # Check for Key first to give a clear error
+    if not os.getenv("CEREBRAS_API_KEY"):
+        logger.warning("⚠️ CEREBRAS_API_KEY is missing. Brain Agent will be offline.")
     else:
-        logger.warning("⚠️ Model not found. Vision features will be disabled.")
+        brain_bot = BrainAgent()
+        logger.info("✅ Brain Agent Ready")
+except Exception as e:
+    logger.error(f"❌ Brain Agent Failed: {e}")
+
+# --- Data Schemas ---
+class DiagnoseRequest(BaseModel):
+    total_parasites: int
+    parasitemia_pct: str
+    detailed_counts: Dict[str, int]
+
+# --- Endpoints ---
+
+@app.get("/")
+def read_root():
+    return {
+        "status": "Online",
+        "vision_agent": "Active" if vision_bot else "Down",
+        "brain_agent": "Active" if brain_bot else "Down (Check API Key)"
+    }
 
 @app.post("/analyze")
-async def analyze_sample(file: UploadFile = File(...)):
-    """
-    1. Receives image from Frontend
-    2. Sends to Vision Agent -> Gets counts + bounding box image
-    3. Sends counts to Brain Agent -> Gets medical report
-    4. Returns everything to Frontend
-    """
+async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
     if not vision_bot:
-        raise HTTPException(status_code=503, detail="AI System is initializing...")
-    
-    # Save the uploaded file temporarily so YOLO can read it
-    temp_filename = f"temp_{file.filename}"
-    with open(temp_filename, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        raise HTTPException(status_code=503, detail="Vision Agent is not running.")
 
+    temp_filename = f"temp_{file.filename}"
     try:
-        # Run the pipeline
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
         vision_results = vision_bot.analyze_image(temp_filename)
+
+        if mode == "vision_only":
+            return {"analysis": vision_results}
+
+        # Legacy Mode (Single Image Full Report)
+        if not brain_bot:
+            return {
+                "analysis": vision_results,
+                "report": "Error: Brain Agent is offline. Please check server logs for API Key issues."
+            }
+
         clinical_report = brain_bot.generate_report(vision_results)
-        
-        return {
-            "analysis": vision_results,
-            "report": clinical_report
-        }
-    
+        return {"analysis": vision_results, "report": clinical_report}
+
     except Exception as e:
-        logger.error(f"Pipeline Failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    
+        logger.error(f"Analysis Failed: {e}")
+        return {"error": str(e)}
     finally:
-        # Clean up the temp file
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
+
+@app.post("/diagnose")
+async def diagnose_session(data: DiagnoseRequest):
+    """
+    Generates a report from AGGREGATED session data.
+    """
+    if not brain_bot:
+        # This prevents the 500 Crash and tells you EXACTLY what is wrong
+        raise HTTPException(
+            status_code=503, 
+            detail="Brain Agent is offline. Check backend logs for 'CEREBRAS_API_KEY' error."
+        )
+
+    try:
+        aggregated_vision_data = {
+            "detailed_counts": data.detailed_counts,
+            "total_parasites": data.total_parasites,
+            "parasitemia_calculation": {"value": data.parasitemia_pct}
+        }
+        report = brain_bot.generate_report(aggregated_vision_data)
+        return {"report": report}
+    except Exception as e:
+        logger.error(f"Diagnosis Failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
