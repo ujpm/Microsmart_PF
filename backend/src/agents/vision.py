@@ -7,163 +7,107 @@ in microscopic images.
 """
 
 import logging
-import base64
 import cv2
 import numpy as np
-from typing import Dict, Any, List
 from ultralytics import YOLO
+from src import config  # Import central config
 
-# Configure logging to standard output
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class VisionAgent:
-    """
-    Orchestrates the loading of the YOLO model and running inference on blood smears.
-    """
-
     def __init__(self, model_path: str = "models/best.pt"):
-        try:
-            logger.info(f"Loading Vision Model from: {model_path}")
-            self.model = YOLO(model_path)
-        except Exception as e:
-            logger.error(f"Failed to load YOLO model: {e}")
-            raise
+        self.model = YOLO(model_path)
 
-    def analyze_image(self, image_path: str) -> Dict[str, Any]:
-        """
-        Runs YOLOv8 inference on the provided image and returns a structured report.
-        Includes logic to map all parasites to P. falciparum (Pf) codes for the Beta version.
-        """
-        logger.info(f"Running inference on: {image_path}")
-        
-        # 1. Run Inference
-        # conf=0.25 is set to reduce noise while keeping sensitivity high
+    def analyze_image(self, image_path: str, file_id: str):
+        # 1. Inference
         results = self.model.predict(image_path, conf=0.25, verbose=False)
-        result = results[0] 
+        result = results[0]
+        
+        # 2. Dynamic Font Scaling Logic
+        h, w = result.orig_shape[:2]
+        # Calculate scale: 1500px -> 0.5, 3000px -> 1.0
+        font_scale = max(w, h) / config.BASE_IMAGE_SIZE * config.BASE_FONT_SCALE
+        font_scale = max(font_scale, 0.4) # Never go below 0.4
+        thickness = max(1, int(font_scale * 2))
 
-        # --- 2. Data Collection (Counts & Labels) ---
+        # 3. Process Detections
         counts = {
-            "Red_Blood_Cell": 0, 
-            "Leukocyte": 0, 
-            "Ring": 0, 
-            "Trophozoite": 0, 
-            "Gametocyte": 0, 
-            "Schizont": 0
+            "Red_Blood_Cell": 0, "Leukocyte": 0, 
+            "Ring": 0, "Trophozoite": 0, "Gametocyte": 0, "Schizont": 0
         }
-
-        boxes_to_draw = []
+        
+        annotated_img = result.orig_img.copy()
 
         for box in result.boxes:
             class_id = int(box.cls[0])
-            raw_name = self.model.names[class_id].lower()
+            name = self.model.names[class_id].lower()
             conf = float(box.conf[0])
-            
-            # --- LABEL LOGIC: Short Codes (PfR, PfT, PfG, PfS) ---
-            label_text = ""
-            color = (150, 150, 150) # Default Gray for background objects
-            is_parasite = False
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-            # A. Cells (Background)
-            if "rbc" in raw_name or "red_blood_cell" in raw_name:
+            # Label Logic
+            label = ""
+            color = (100, 100, 100)
+
+            if "rbc" in name or "red_blood" in name:
                 counts["Red_Blood_Cell"] += 1
-                # We intentionally do NOT label RBCs to keep the image clean
+                # RBCs: No bounding box to keep image clean
             
-            elif "leukocyte" in raw_name or "wbc" in raw_name:
+            elif "leukocyte" in name or "wbc" in name:
                 counts["Leukocyte"] += 1
-                label_text = "WBC"
-                color = (255, 0, 255) # Magenta for WBCs
-
-            # B. Parasites (The "Pf" Patch)
-            # Logic: Map everything to P. falciparum short codes for this version
+                color = (255, 0, 255) # Magenta
+                label = "WBC"
+            
             else:
-                is_parasite = True
-                color = (0, 255, 255) # Cyan for Parasites
+                # Parasites (Cyan)
+                color = (0, 255, 255)
+                code = "Pf?"
+                if "ring" in name: 
+                    counts["Ring"] += 1; code = "PfR"
+                elif "trophozoite" in name: 
+                    counts["Trophozoite"] += 1; code = "PfT"
+                elif "gametocyte" in name: 
+                    counts["Gametocyte"] += 1; code = "PfG"
+                elif "schizont" in name: 
+                    counts["Schizont"] += 1; code = "PfS"
+                elif "vivax" in name or "falciparum" in name:
+                    counts["Trophozoite"] += 1; code = "PfT" # The Patch
                 
-                stage_code = "Pf?" # Default fallback
-                
-                if "ring" in raw_name: 
-                    counts["Ring"] += 1
-                    stage_code = "PfR" # Ring
-                elif "trophozoite" in raw_name: 
-                    counts["Trophozoite"] += 1
-                    stage_code = "PfT" # Trophozoite
-                elif "gametocyte" in raw_name: 
-                    counts["Gametocyte"] += 1
-                    stage_code = "PfG" # Gametocyte
-                elif "schizont" in raw_name: 
-                    counts["Schizont"] += 1
-                    stage_code = "PfS" # Schizont
-                
-                # Handling "Vivax" or generic labels by forcing them to Pf Trophs
-                # This fixes the "Vivax Over-detection" issue temporarily
-                elif "vivax" in raw_name or "falciparum" in raw_name:
-                    counts["Trophozoite"] += 1
-                    stage_code = "PfT"
+                label = f"{code} {conf:.2f}"
 
-                # FINAL LABEL FORMAT: "PfT 0.85"
-                label_text = f"{stage_code} {conf:.2f}"
+            # Draw (if label exists)
+            if label:
+                cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, thickness)
+                (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+                cv2.rectangle(annotated_img, (x1, y1 - th - 5), (x1 + tw, y1), color, -1)
+                cv2.putText(annotated_img, label, (x1, y1 - 4), 
+                           cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
 
-            # Save valid boxes for the drawing phase
-            if label_text: 
-                boxes_to_draw.append({
-                    "coords": box.xyxy[0],
-                    "label": label_text,
-                    "color": color,
-                    "is_parasite": is_parasite
-                })
+        # 4. Save Image to Static Disk (The Good Solution)
+        filename = f"analyzed_{file_id}.jpg"
+        output_path = config.RESULTS_DIR / filename
+        cv2.imwrite(str(output_path), annotated_img)
 
-        # --- 3. Draw Clean Image ---
-        # We work on a copy of the original image
-        annotated_bgr = result.orig_img.copy()
-
-        for item in boxes_to_draw:
-            x1, y1, x2, y2 = map(int, item["coords"])
-            
-            # Draw Bounding Box
-            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), item["color"], 2)
-            
-            # Draw Label Background (Small and tight for readability)
-            # Scale font size slightly based on image width if needed, but 0.4 is usually good
-            (w, h), _ = cv2.getTextSize(item["label"], cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
-            cv2.rectangle(annotated_bgr, (x1, y1 - 15), (x1 + w, y1), item["color"], -1)
-            
-            # Draw Label Text
-            cv2.putText(annotated_bgr, item["label"], (x1, y1 - 4), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-
-        # Encode image to Base64 for the frontend
-        _, buffer = cv2.imencode('.jpg', annotated_bgr)
-        img_base64 = base64.b64encode(buffer).decode('utf-8')
-
-        # --- 4. The Report Logic (Parasitemia Calculation) ---
-        total_parasites = counts["Ring"] + counts["Trophozoite"] + counts["Gametocyte"] + counts["Schizont"]
-        total_rbc = counts["Red_Blood_Cell"]
-
-        # Calculation Logic: Avoids "3100%" errors if RBC count is low
+        # 5. Parasitemia Math (The Safety Floor)
+        total_p = counts["Ring"] + counts["Trophozoite"] + counts["Gametocyte"] + counts["Schizont"]
+        detected_rbc = counts["Red_Blood_Cell"]
+        
+        # Use the MAX of detected RBCs or the Safety Floor (150)
+        effective_rbc = max(detected_rbc, config.MIN_RBC_PER_FIELD)
+        
         parasitemia_str = "N/A"
-        if total_rbc > total_parasites:
-             # Formula: (Parasites / (RBCs + Parasites)) * 100
-             # We add parasites to denominator to approximate total cell count better
-            p_val = (total_parasites / (total_rbc + total_parasites)) * 100
-            parasitemia_str = f"{p_val:.2f}%"
+        if effective_rbc > 0:
+            # Standard Formula: P / RBC * 100
+            val = (total_p / effective_rbc) * 100
+            parasitemia_str = f"{val:.2f}%"
 
-        # Construct the final JSON response
-        analysis_report = {
-            "summary_headline": f"{total_parasites} Parasites Detected", 
-            "total_parasites": total_parasites,
+        return {
+            "summary_headline": f"{total_p} Parasites Detected",
+            "total_parasites": total_p,
             "parasitemia_calculation": {
-                "status": "Success" if parasitemia_str != "N/A" else "Insufficient RBCs",
                 "value": parasitemia_str,
-                "rbc_count": total_rbc
+                "rbc_used": effective_rbc,
+                "note": "Used Safety Floor" if detected_rbc < config.MIN_RBC_PER_FIELD else "Actual Count"
             },
             "detailed_counts": counts,
-            "annotated_image": img_base64,
-            "image_metadata": {
-                "height": result.orig_shape[0],
-                "width": result.orig_shape[1]
-            }
+            "image_url": f"/static/results/{filename}" # Returning URL now!
         }
-
-        logger.info(f"Report: {analysis_report['summary_headline']} | Parasitemia: {parasitemia_str}")
-        return analysis_report

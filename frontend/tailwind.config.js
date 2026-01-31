@@ -6,23 +6,41 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+      },
       colors: {
-        // Custom Medical Palette
-        medical: {
-          50: '#f0f9ff',  // Backgrounds
-          100: '#e0f2fe',
-          500: '#0ea5e9', // Primary Buttons
-          600: '#0284c7', // Hover States
-          900: '#0c4a6e', // Text / Headers
+        // The "MicroSmart Dark" Palette
+        slate: {
+          850: '#151e2e', // Lighter than 900, good for cards/panels
+          950: '#020617', // Deep background
         },
-        // For Alerting (Malaria Positive)
+        cyan: {
+          400: '#22d3ee', // Primary Highlights (The "Laser" look)
+          500: '#06b6d4',
+          900: '#164e63',
+        },
+        // Semantic Medical Colors
         danger: {
-          500: '#ef4444',
-          600: '#dc2626',
+          DEFAULT: '#ef4444', // High Parasitemia
+          glow: 'rgba(239, 68, 68, 0.5)',
         },
-        // For Safety (Healthy)
-        success: {
-          500: '#22c55e',
+        warning: '#f59e0b', // Moderate
+        safe: '#10b981',    // Negative/Healthy
+      },
+      backgroundImage: {
+        'glass-gradient': 'linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.6) 100%)',
+        'grid-pattern': "linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)",
+      },
+      animation: {
+        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        fadeInUp: {
+          'from': { opacity: '0', transform: 'translateY(20px)' },
+          'to': { opacity: '1', transform: 'translateY(0)' },
         }
       }
     },

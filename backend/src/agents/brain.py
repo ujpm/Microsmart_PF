@@ -9,68 +9,41 @@ Author: MicroSmart Team
 
 import os
 import logging
-from typing import Dict
 from cerebras.cloud.sdk import Cerebras
+from src import config
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class BrainAgent:
     def __init__(self):
-        api_key = os.environ.get("CEREBRAS_API_KEY")
-        if not api_key:
-            logger.error("CEREBRAS_API_KEY environment variable is not set.")
-            raise EnvironmentError("Missing Cerebras API Key")
-        
-        self.client = Cerebras(api_key=api_key)
-        self.model_id = "llama-3.3-70b"
+        self.client = Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY"))
+        self.model = "llama-3.3-70b"
 
-    def generate_report(self, vision_data: Dict) -> str:
-        counts = vision_data['counts']
-        parasitemia = vision_data['parasitemia_pct']
-        total_parasites = counts['Ring'] + counts['Trophozoite'] + counts['Gametocyte'] + counts['Schizont']
-
-        # CLINICAL CONTEXT: Rwandan National Malaria Guidelines focus
-        system_prompt = (
-            "You are an expert Malariologist at a District Hospital in Rwanda. "
-            "Your goal is maximum sensitivity. If any parasites are detected, you must report a positive case. "
-            "P. falciparum is the most common and dangerous species in the region. "
-            "Provide professional, concise, and actionable diagnosis following WHO and Rwandan guidelines."
-        )
+    def generate_report(self, vision_data: dict) -> str:
+        # Extract Data
+        counts = vision_data.get('detailed_counts', {})
+        parasitemia = vision_data.get('parasitemia_calculation', {}).get('value', 'N/A')
+        total = vision_data.get('total_parasites', 0)
 
         user_prompt = f"""
-        LABORATORY DATA:
-        - Total Parasites Detected: {total_parasites}
-        - Computed Parasitemia: {parasitemia}%
+        DATA INPUT:
+        - Parasitemia: {parasitemia}
+        - Total Parasites: {total}
+        - Breakdown: {counts}
         
-        CELL BREAKDOWN:
-        - Red Blood Cells (RBC): {counts.get('Red_Blood_Cell', 0)}
-        - White Blood Cells (WBC): {counts.get('Leukocyte', 0)}
-        - Ring Stages: {counts.get('Ring', 0)}
-        - Trophozoites: {counts.get('Trophozoite', 0)}
-        - Gametocytes: {counts.get('Gametocyte', 0)}
-        - Schizonts: {counts.get('Schizont', 0)}
-
-        TASK:
-        1. **Final Diagnosis**: Is this Positive for Malaria? (Even 1 Ring stage is a Positive). Specify species likelihood (primarily P. falciparum).
-        2. **Severity Classification**: (Uncomplicated vs Severe). Note: Any neurological signs or >5% parasitemia indicate severe malaria in Rwanda.
-        3. **Rwandan Protocol**: If positive, suggest Artemether-Lumefantrine (Coartem) for uncomplicated or IV Artesunate for severe cases.
-        4. **Laboratory Note**: If parasite count is low (<0.1%), advise a second smear for confirmation.
+        Generate a diagnostic summary.
         """
 
         try:
-            logger.info("Generating Clinical Report via Cerebras...")
             response = self.client.chat.completions.create(
-                model=self.model_id,
+                model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": config.SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.1, # Keep it extremely factual
-                max_tokens=600
+                temperature=0.1
             )
             return response.choices[0].message.content
-        
         except Exception as e:
-            logger.error(f"Brain Agent Failure: {e}")
-            return "Error: Clinical reasoning engine offline."
+            logger.error(f"Brain Error: {e}")
+            return "Error: MicroSmart reasoning engine unavailable."

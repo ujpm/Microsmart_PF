@@ -7,23 +7,27 @@ and delegates work to the Vision and Brain agents.
 import shutil
 import os
 import logging
+import uuid
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv() 
-
+from src import config
 from src.agents.vision import VisionAgent
 from src.agents.brain import BrainAgent
 
-# Configure Logging
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("MicroSmart-Backend")
 
 app = FastAPI()
+
+# 1. MOUNT STATIC FILES (The "Good Solution" for images)
+# Access images at: http://localhost:8000/static/results/filename.jpg
+app.mount("/static", StaticFiles(directory=config.STATIC_DIR), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,96 +37,66 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Global Agent Variables ---
-vision_bot = None
+# --- AGENTS ---
+vision_bot = VisionAgent()
 brain_bot = None
 
-# Initialize Agents
-try:
-    logger.info("Initializing Agents...")
-    vision_bot = VisionAgent()
-    logger.info("✅ Vision Agent Ready")
-except Exception as e:
-    logger.error(f"❌ Vision Agent Failed: {e}")
+if os.getenv("CEREBRAS_API_KEY"):
+    brain_bot = BrainAgent()
+else:
+    logger.warning("⚠️ Brain Agent Offline (Missing API Key)")
 
-try:
-    # Check for Key first to give a clear error
-    if not os.getenv("CEREBRAS_API_KEY"):
-        logger.warning("⚠️ CEREBRAS_API_KEY is missing. Brain Agent will be offline.")
-    else:
-        brain_bot = BrainAgent()
-        logger.info("✅ Brain Agent Ready")
-except Exception as e:
-    logger.error(f"❌ Brain Agent Failed: {e}")
+# --- ENDPOINTS ---
 
-# --- Data Schemas ---
+@app.post("/analyze")
+async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
+    if not vision_bot:
+        raise HTTPException(503, "Vision Agent offline")
+
+    # Save Upload Temporarily
+    temp_id = str(uuid.uuid4())
+    temp_ext = file.filename.split(".")[-1]
+    temp_path = config.RESULTS_DIR / f"raw_{temp_id}.{temp_ext}"
+    
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Run Vision (Now saves to disk and returns URL)
+        vision_results = vision_bot.analyze_image(str(temp_path), temp_id)
+
+        if mode == "vision_only":
+            return {"analysis": vision_results}
+
+        # Brain Analysis
+        if not brain_bot:
+            return {"analysis": vision_results, "report": "Brain Agent Offline."}
+            
+        report = brain_bot.generate_report(vision_results)
+        return {"analysis": vision_results, "report": report}
+
+    except Exception as e:
+        logger.error(f"Analysis Error: {e}")
+        return {"error": str(e)}
+    finally:
+        # Cleanup the RAW upload, but keep the Annotated result
+        if temp_path.exists():
+            os.remove(temp_path)
+
 class DiagnoseRequest(BaseModel):
     total_parasites: int
     parasitemia_pct: str
     detailed_counts: Dict[str, int]
 
-# --- Endpoints ---
-
-@app.get("/")
-def read_root():
-    return {
-        "status": "Online",
-        "vision_agent": "Active" if vision_bot else "Down",
-        "brain_agent": "Active" if brain_bot else "Down (Check API Key)"
-    }
-
-@app.post("/analyze")
-async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
-    if not vision_bot:
-        raise HTTPException(status_code=503, detail="Vision Agent is not running.")
-
-    temp_filename = f"temp_{file.filename}"
-    try:
-        with open(temp_filename, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        vision_results = vision_bot.analyze_image(temp_filename)
-
-        if mode == "vision_only":
-            return {"analysis": vision_results}
-
-        # Legacy Mode (Single Image Full Report)
-        if not brain_bot:
-            return {
-                "analysis": vision_results,
-                "report": "Error: Brain Agent is offline. Please check server logs for API Key issues."
-            }
-
-        clinical_report = brain_bot.generate_report(vision_results)
-        return {"analysis": vision_results, "report": clinical_report}
-
-    except Exception as e:
-        logger.error(f"Analysis Failed: {e}")
-        return {"error": str(e)}
-    finally:
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
-
 @app.post("/diagnose")
 async def diagnose_session(data: DiagnoseRequest):
-    """
-    Generates a report from AGGREGATED session data.
-    """
     if not brain_bot:
-        # This prevents the 500 Crash and tells you EXACTLY what is wrong
-        raise HTTPException(
-            status_code=503, 
-            detail="Brain Agent is offline. Check backend logs for 'CEREBRAS_API_KEY' error."
-        )
-
-    try:
-        aggregated_vision_data = {
-            "detailed_counts": data.detailed_counts,
-            "total_parasites": data.total_parasites,
-            "parasitemia_calculation": {"value": data.parasitemia_pct}
-        }
-        report = brain_bot.generate_report(aggregated_vision_data)
-        return {"report": report}
-    except Exception as e:
-        logger.error(f"Diagnosis Failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(503, "Brain Agent Offline")
+    
+    # Reconstruct data structure for the Brain
+    agg_data = {
+        "detailed_counts": data.detailed_counts,
+        "total_parasites": data.total_parasites,
+        "parasitemia_calculation": {"value": data.parasitemia_pct}
+    }
+    return {"report": brain_bot.generate_report(agg_data)}

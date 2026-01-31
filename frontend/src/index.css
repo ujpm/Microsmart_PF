@@ -4,41 +4,41 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased selection:bg-blue-100 selection:text-blue-900;
+    @apply bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200;
   }
 }
 
 @layer components {
-  .bg-medical-50 {
-    background-color: #f8fafc;
-    background-image: radial-gradient(#e2e8f0 0.5px, transparent 0.5px);
-    background-size: 24px 24px;
+  /* The "Glass" Panel Effect */
+  .glass-panel {
+    @apply bg-slate-900/80 backdrop-blur-md border border-slate-700/50 shadow-xl;
   }
 
-  /* Custom Scrollbar for the Agent Reasoning Window */
-  .overflow-auto::-webkit-scrollbar {
+  /* Sophisticated Scrollbars */
+  .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
-  .overflow-auto::-webkit-scrollbar-track {
-    @apply bg-transparent;
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-slate-900;
   }
-  .overflow-auto::-webkit-scrollbar-thumb {
-    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded-full hover:bg-slate-600 transition-colors;
+  }
+
+  /* Grid Background for "Empty" Spaces */
+  .bg-grid-pattern {
+    background-size: 40px 40px;
+    mask-image: linear-gradient(to bottom, transparent, 10%, white, 90%, transparent);
   }
 }
 
-/* Entrance Animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Global Animations */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
