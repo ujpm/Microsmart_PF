@@ -22,6 +22,10 @@ logger = logging.getLogger("MicroSmartAPI")
 
 app = FastAPI(title="MicroSmart PF API", version="1.1.0")
 
+@app.get("/")
+def read_root():
+    return {"message": "MicroSmart PF Backend is Running!", "status": "OK"}
+
 # Enable CORS so your React frontend can talk to this backend
 app.add_middleware(
     CORSMiddleware,

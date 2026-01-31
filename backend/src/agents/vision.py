@@ -10,7 +10,7 @@ import logging
 import base64
 import cv2
 import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ultralytics import YOLO
 
 # Configure logging to standard output
@@ -31,24 +31,27 @@ class VisionAgent:
             raise
 
     def analyze_image(self, image_path: str) -> Dict[str, Any]:
+        """
+        Runs YOLOv8 inference on the provided image and returns a structured report.
+        Includes logic to map all parasites to P. falciparum (Pf) codes for the Beta version.
+        """
         logger.info(f"Running inference on: {image_path}")
         
         # 1. Run Inference
-        # Increased confidence slightly to reduce pure noise, but kept low enough for sensitivity
-        results = self.model.predict(image_path, conf=0.20, verbose=False)
+        # conf=0.25 is set to reduce noise while keeping sensitivity high
+        results = self.model.predict(image_path, conf=0.25, verbose=False)
         result = results[0] 
 
-        # --- 2. Calculate Counts (Data Logic) ---
+        # --- 2. Data Collection (Counts & Labels) ---
         counts = {
-            "Red_Blood_Cell": 0,
-            "Leukocyte": 0,
-            "Ring": 0,
-            "Trophozoite": 0,
-            "Gametocyte": 0,
+            "Red_Blood_Cell": 0, 
+            "Leukocyte": 0, 
+            "Ring": 0, 
+            "Trophozoite": 0, 
+            "Gametocyte": 0, 
             "Schizont": 0
         }
 
-        # We need to collect box data to draw them manually later
         boxes_to_draw = []
 
         for box in result.boxes:
@@ -56,92 +59,105 @@ class VisionAgent:
             raw_name = self.model.names[class_id].lower()
             conf = float(box.conf[0])
             
-            # Label Overrides
-            final_label = raw_name
+            # --- LABEL LOGIC: Short Codes (PfR, PfT, PfG, PfS) ---
+            label_text = ""
+            color = (150, 150, 150) # Default Gray for background objects
             is_parasite = False
 
+            # A. Cells (Background)
             if "rbc" in raw_name or "red_blood_cell" in raw_name:
                 counts["Red_Blood_Cell"] += 1
-                final_label = "RBC"
+                # We intentionally do NOT label RBCs to keep the image clean
             
             elif "leukocyte" in raw_name or "wbc" in raw_name:
                 counts["Leukocyte"] += 1
-                final_label = "WBC"
+                label_text = "WBC"
+                color = (255, 0, 255) # Magenta for WBCs
 
-            # --- THE FIX: RELABELING LOGIC ---
-            elif "vivax" in raw_name:
-                # Force "vivax" detections to count as PF Trophozoites
-                counts["Trophozoite"] += 1
-                final_label = f"P. falciparum Trophozoite {conf:.2f}"
+            # B. Parasites (The "Pf" Patch)
+            # Logic: Map everything to P. falciparum short codes for this version
+            else:
                 is_parasite = True
+                color = (0, 255, 255) # Cyan for Parasites
                 
-            elif "trophozoite" in raw_name:
-                counts["Trophozoite"] += 1
-                final_label = f"P. falciparum Trophozoite {conf:.2f}"
-                is_parasite = True
+                stage_code = "Pf?" # Default fallback
+                
+                if "ring" in raw_name: 
+                    counts["Ring"] += 1
+                    stage_code = "PfR" # Ring
+                elif "trophozoite" in raw_name: 
+                    counts["Trophozoite"] += 1
+                    stage_code = "PfT" # Trophozoite
+                elif "gametocyte" in raw_name: 
+                    counts["Gametocyte"] += 1
+                    stage_code = "PfG" # Gametocyte
+                elif "schizont" in raw_name: 
+                    counts["Schizont"] += 1
+                    stage_code = "PfS" # Schizont
+                
+                # Handling "Vivax" or generic labels by forcing them to Pf Trophs
+                # This fixes the "Vivax Over-detection" issue temporarily
+                elif "vivax" in raw_name or "falciparum" in raw_name:
+                    counts["Trophozoite"] += 1
+                    stage_code = "PfT"
 
-            elif "ring" in raw_name:
-                counts["Ring"] += 1
-                final_label = f"P. falciparum Ring {conf:.2f}"
-                is_parasite = True
+                # FINAL LABEL FORMAT: "PfT 0.85"
+                label_text = f"{stage_code} {conf:.2f}"
 
-            elif "gametocyte" in raw_name:
-                counts["Gametocyte"] += 1
-                final_label = f"P. falciparum Gametocyte {conf:.2f}"
-                is_parasite = True
+            # Save valid boxes for the drawing phase
+            if label_text: 
+                boxes_to_draw.append({
+                    "coords": box.xyxy[0],
+                    "label": label_text,
+                    "color": color,
+                    "is_parasite": is_parasite
+                })
 
-            elif "schizont" in raw_name:
-                counts["Schizont"] += 1
-                final_label = f"P. falciparum Schizont {conf:.2f}"
-                is_parasite = True
-            
-            # Save for drawing
-            boxes_to_draw.append({
-                "coords": box.xyxy[0],
-                "label": final_label,
-                "is_parasite": is_parasite
-            })
-
-        # --- 3. Generate Annotated Image (Visual Logic) ---
-        # We draw manually on the original image instead of using result.plot()
+        # --- 3. Draw Clean Image ---
+        # We work on a copy of the original image
         annotated_bgr = result.orig_img.copy()
 
         for item in boxes_to_draw:
             x1, y1, x2, y2 = map(int, item["coords"])
-            label = item["label"]
             
-            # Color coding: Cyan for Parasites, Gray for Cells
-            color = (255, 255, 0) if item["is_parasite"] else (150, 150, 150)
-            thickness = 2 if item["is_parasite"] else 1
+            # Draw Bounding Box
+            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), item["color"], 2)
             
-            # Don't draw box for RBCs to keep image clean (optional, currently drawing)
-            # If you want to hide RBC boxes, uncomment the next line:
-            # if label == "RBC": continue 
-
-            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), color, thickness)
-            
-            # Draw Label Background
-            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv2.rectangle(annotated_bgr, (x1, y1 - 20), (x1 + w, y1), color, -1)
+            # Draw Label Background (Small and tight for readability)
+            # Scale font size slightly based on image width if needed, but 0.4 is usually good
+            (w, h), _ = cv2.getTextSize(item["label"], cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
+            cv2.rectangle(annotated_bgr, (x1, y1 - 15), (x1 + w, y1), item["color"], -1)
             
             # Draw Label Text
-            text_color = (0, 0, 0) # Black text
-            cv2.putText(annotated_bgr, label, (x1, y1 - 5), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+            cv2.putText(annotated_bgr, item["label"], (x1, y1 - 4), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
+        # Encode image to Base64 for the frontend
         _, buffer = cv2.imencode('.jpg', annotated_bgr)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
 
-        # --- 4. Calculate Parasitemia ---
-        rbc_count = counts["Red_Blood_Cell"]
-        total_rbc = rbc_count if rbc_count > 0 else 1 
-
+        # --- 4. The Report Logic (Parasitemia Calculation) ---
         total_parasites = counts["Ring"] + counts["Trophozoite"] + counts["Gametocyte"] + counts["Schizont"]
-        parasitemia = (total_parasites / total_rbc) * 100
+        total_rbc = counts["Red_Blood_Cell"]
 
+        # Calculation Logic: Avoids "3100%" errors if RBC count is low
+        parasitemia_str = "N/A"
+        if total_rbc > total_parasites:
+             # Formula: (Parasites / (RBCs + Parasites)) * 100
+             # We add parasites to denominator to approximate total cell count better
+            p_val = (total_parasites / (total_rbc + total_parasites)) * 100
+            parasitemia_str = f"{p_val:.2f}%"
+
+        # Construct the final JSON response
         analysis_report = {
-            "counts": counts,
-            "parasitemia_pct": round(parasitemia, 4),
+            "summary_headline": f"{total_parasites} Parasites Detected", 
+            "total_parasites": total_parasites,
+            "parasitemia_calculation": {
+                "status": "Success" if parasitemia_str != "N/A" else "Insufficient RBCs",
+                "value": parasitemia_str,
+                "rbc_count": total_rbc
+            },
+            "detailed_counts": counts,
             "annotated_image": img_base64,
             "image_metadata": {
                 "height": result.orig_shape[0],
@@ -149,5 +165,5 @@ class VisionAgent:
             }
         }
 
-        logger.info(f"Analysis Complete: {total_parasites} parasites found. Parasitemia {parasitemia:.4f}%")
+        logger.info(f"Report: {analysis_report['summary_headline']} | Parasitemia: {parasitemia_str}")
         return analysis_report
