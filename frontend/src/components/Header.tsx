@@ -1,16 +1,21 @@
 import React from 'react';
 import { Microscope } from 'lucide-react';
+import { BRAND } from '../config';
 
 export const Header: React.FC = () => {
   return (
-    <div className="col-span-full mb-2">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-1 bg-blue-600 rounded-full" />
+    <div className="w-full bg-slate-950/50 border-b border-slate-800/50 py-3 px-6 backdrop-blur-sm shrink-0">
+      <div className="flex items-center gap-4">
+        {/* Active Session Indicator */}
+        <div className="h-8 w-1 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+        
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">PF-Agent Analysis Lab</h1>
-          <p className="text-sm text-slate-500 flex items-center">
-            <Microscope size={14} className="mr-1.5" />
-            Active Research Session: Parasite Morphology & Quantification
+          {/* LOGO 3: Sub-Project Identity */}
+          <img src={BRAND.logos.wordmark} alt="PF Agent" className="h-6 mb-1 opacity-90" />
+          
+          <p className="text-xs text-slate-400 flex items-center font-mono tracking-wide">
+            <Microscope size={12} className="mr-1.5 text-cyan-500" />
+            SESSION ACTIVE: P. FALCIPARUM MORPHOLOGY SCAN
           </p>
         </div>
       </div>
