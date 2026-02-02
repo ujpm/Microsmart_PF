@@ -1,6 +1,6 @@
 import { useState } from 'react';
+import { API_CONFIG } from '../config';
 
-// --- Exported Types ---
 export interface VisionResult {
   summary_headline: string;
   total_parasites: number;
@@ -8,10 +8,10 @@ export interface VisionResult {
     status: string;
     value: string;
     rbc_count: number;
-    note?: string; // Added from backend update
+    note?: string; 
   };
   detailed_counts: Record<string, number>;
-  image_url: string; // FIX: Changed from annotated_image (Base64) to URL
+  image_url: string; 
   image_metadata?: { width: number; height: number };
 }
 
@@ -28,67 +28,29 @@ export const useAnalysis = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressMsg, setProgressMsg] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-  // Helper: Aggregate Data for the Brain
-  const calculateAggregate = (items: SessionItem[]) => {
-    let totalP = 0;
-    let totalRBC = 0;
-    const counts: Record<string, number> = { Ring: 0, Trophozoite: 0, Gametocyte: 0, Schizont: 0 };
-
-    items.forEach(item => {
-      if (item.result) {
-        totalP += item.result.total_parasites;
-        // Check if rbc_count exists (it might be in 'rbc_used' or 'rbc_detected' depending on backend version, 
-        // but let's stick to the structure we saw in Step 1)
-        // In Step 1 backend: rbc_used, rbc_detected. Let's safeguard.
-        // For aggregation, we just need a rough estimate or we rely on backend "diagnose" endpoint completely.
-        // We will sum the "effective" RBCs if available.
-        const rbc = (item.result.parasitemia_calculation as any).rbc_used || item.result.parasitemia_calculation.rbc_count || 0;
-        totalRBC += rbc;
-
-        Object.entries(item.result.detailed_counts).forEach(([key, val]) => {
-          if (counts[key] !== undefined) counts[key] += val;
-        });
-      }
-    });
-
-    let pct = "N/A";
-    if (totalRBC > 0) {
-      pct = ((totalP / totalRBC) * 100).toFixed(2) + "%";
-    }
-
-    return { totalP, pct, counts };
-  };
-
-  const analyzeBatch = async (files: File[]) => {
+  // Helper to process a specific list of items (used for initial load and appending)
+  const processQueue = async (itemsToProcess: SessionItem[], startIndex: number) => {
     setIsProcessing(true);
     setGlobalReport(null);
-    
-    // 1. Initialize Session
-    const newSession: SessionItem[] = files.map((f, idx) => ({
-      id: `slide-${Date.now()}-${idx}`,
-      status: 'pending',
-      originalFile: f,
-      result: null
-    }));
-    setSession(newSession);
 
-    // 2. Process Loop
-    const completedSession = [...newSession]; 
+    // We process sequentially to avoid overwhelming the browser/server
+    for (let i = 0; i < itemsToProcess.length; i++) {
+      const currentItem = itemsToProcess[i];
+      const globalIndex = startIndex + i; 
+      const file = currentItem.originalFile;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      setProgressMsg(`Scanning Slide ${i + 1} of ${files.length}...`);
+      setProgressMsg(`Scanning Slide ${globalIndex + 1}...`);
 
-      completedSession[i].status = 'processing';
-      setSession([...completedSession]);
+      // Update status to 'processing'
+      setSession(prev => prev.map(item => 
+        item.id === currentItem.id ? { ...item, status: 'processing' } : item
+      ));
 
       try {
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch(`${API_URL}/analyze?mode=vision_only`, {
+        const res = await fetch(`${API_CONFIG.baseUrl}/analyze?mode=vision_only`, {
           method: "POST",
           body: formData,
         });
@@ -96,43 +58,59 @@ export const useAnalysis = () => {
         if (!res.ok) throw new Error("API Error");
         const data = await res.json();
         
-        completedSession[i].status = 'done';
-        completedSession[i].result = data.analysis;
-        setSession([...completedSession]);
+        // Update status to 'done'
+        setSession(prev => prev.map(item => 
+          item.id === currentItem.id ? { ...item, status: 'done', result: data.analysis } : item
+        ));
 
       } catch (err) {
         console.error(err);
-        completedSession[i].status = 'error';
-        setSession([...completedSession]);
+        setSession(prev => prev.map(item => 
+          item.id === currentItem.id ? { ...item, status: 'error' } : item
+        ));
       }
     }
 
-    // 3. Final Diagnosis
-    setProgressMsg("Generating Clinical Report...");
-    const stats = calculateAggregate(completedSession);
-    
-    try {
-      const brainRes = await fetch(`${API_URL}/diagnose`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          total_parasites: stats.totalP,
-          parasitemia_pct: stats.pct,
-          detailed_counts: stats.counts
-        })
-      });
-
-      const brainData = await brainRes.json();
-      setGlobalReport(brainData.report);
-      
-    } catch (err) {
-      console.error("Brain Failed", err);
-      setGlobalReport("Error generating report. Check logs.");
-    } finally {
-      setIsProcessing(false);
-      setProgressMsg("");
-    }
+    setIsProcessing(false);
+    setProgressMsg("");
   };
 
-  return { session, analyzeBatch, isProcessing, progressMsg, globalReport };
+  // 1. Initial Batch Analysis (Replaces Session)
+  const analyzeBatch = (files: File[]) => {
+    const newItems: SessionItem[] = files.map((f, idx) => ({
+      id: `slide-${Date.now()}-${idx}`,
+      status: 'pending',
+      originalFile: f,
+      result: null
+    }));
+    setSession(newItems);
+    processQueue(newItems, 0);
+  };
+
+  // 2. Append Files (Adds to Session)
+  const addFiles = (files: File[]) => {
+    const startIdx = session.length;
+    const newItems: SessionItem[] = files.map((f, idx) => ({
+      id: `slide-${Date.now()}-${startIdx + idx}`,
+      status: 'pending',
+      originalFile: f,
+      result: null
+    }));
+    
+    setSession(prev => [...prev, ...newItems]);
+    processQueue(newItems, startIdx);
+  };
+
+  // 3. Remove Slide
+  const removeSlide = (idToDelete: string) => {
+    setSession(prev => prev.filter(item => item.id !== idToDelete));
+  };
+
+  const resetSession = () => {
+    setSession([]);
+    setGlobalReport(null);
+    setIsProcessing(false);
+  };
+
+  return { session, analyzeBatch, addFiles, removeSlide, isProcessing, progressMsg, globalReport, resetSession };
 };

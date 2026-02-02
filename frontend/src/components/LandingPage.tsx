@@ -18,8 +18,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, children }) =
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-6 z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center font-bold text-slate-950">MS</div>
-          <span className="text-xl font-bold tracking-tight">MICROSMART <span className="text-cyan-400">PF</span></span>
+          <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center font-bold text-slate-950">PF</div>
+          <span className="text-xl font-bold tracking-tight">MICROSMART <span className="text-cyan-400">PF AGENT</span></span>
         </div>
         <div className="text-xs font-mono text-slate-500">RESEARCH PREVIEW v1.2</div>
       </nav>
