@@ -84,12 +84,12 @@ class VisionAgent:
                 cv2.putText(annotated_img, label, (x1, y1 - 4), 
                            cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
 
-        # 4. Save Image to Static Disk (The Good Solution)
+        # 4. Save Image to Static Disk
         filename = f"analyzed_{file_id}.jpg"
         output_path = config.RESULTS_DIR / filename
         cv2.imwrite(str(output_path), annotated_img)
 
-        # 5. Parasitemia Math (The Safety Floor)
+        # 5. Parasitemia Math
         total_p = counts["Ring"] + counts["Trophozoite"] + counts["Gametocyte"] + counts["Schizont"]
         detected_rbc = counts["Red_Blood_Cell"]
         
