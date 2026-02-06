@@ -1,91 +1,114 @@
 # MicroSmart PF
 
-## 💡 The Solution
+![Version](https://img.shields.io/badge/Version-Beta_1.2-cyan?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Research_Preview-purple?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
-MicroSmart PF uses a **Tri-Agent Architecture** to replicate a pathologist's workflow:
+**The Premier Autonomous Agent for *P. falciparum* Diagnostics.**
 
-- **👁️ The Eye (Vision Agent)**: A YOLOv8 model acts as the primary screener, detecting cells and drawing bounding boxes to "show its work."
-- **🧠 The Brain (Reasoning Agent)**: The Cerebras Inference API (Llama 3.3) interprets counts and produces a WHO-compliant clinical report.
-- **🖥️ The Body (Frontend)**: A React-based dashboard visualizes the Eye's findings (bounding boxes) and the Brain's diagnosis side-by-side.
+MicroSmart PF is a high-performance diagnostic interface that bridges **Computer Vision** and **Clinical Reasoning**. It automates the detection of Malaria parasites in thin blood smears and generates WHO-compliant pathology reports in real-time.
+
+Designed as a professional "Cockpit" for lab technicians and pathologists, it prioritizes speed, accuracy, and dark-mode ergonomics.
 
 ---
 
-## 🚀 Tech Stack
+## 🌌 The MicroSmart Ecosystem
 
-**Frontend**  
+MicroSmart PF is the specialized malaria node of the larger **MicroSmart Project**. We are building a constellation of autonomous agents for hematology and cytology.
+
+- **MicroSmart PF**: *P. falciparum* Malaria (Active)
+- **MicroSmart Heme**: Hematology & CBC Analysis (In Development)
+- **MicroSmart Cyto**: Cervical Cancer Screening (R&D)
+
+[🌐 Explore the Parent Project](https://microsmartpf.xyz)
+
+---
+
+## 🚀 Key Features
+
+### 🔬 The "Double-Engine" Architecture
+- **The Eye (Vision Agent)**: Powered by **YOLOv8**. Scans slides at ~40ms/frame to detect Trophozoites, Gametocytes, and WBCs with pixel-perfect bounding boxes.
+- **The Brain (Reasoning Agent)**: Powered by **Llama 3.3 (via Cerebras)**. Interprets raw cellular counts, calculates parasitemia levels, and acts as a virtual pathologist to write the final report.
+
+### 🖥️ Interface (Frontend)
+- **Professional Workbench**: A collapsible, 3-pane dashboard designed for high-throughput screening.
+- **Batch Processing**: Queue multiple slides and process them sequentially without blocking the UI.
+- **Smart Viewer**: High-fidelity deep zoom with **AI/RAW toggles** (Spacebar shortcut).
+- **Filmstrip Navigation**: Rapidly switch between patient samples using Arrow Keys.
+- **Zero-Latency UX**: Local-first state management with optimized React rendering.
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend**
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org) [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev) [![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-**Backend & AI**  
+**Backend**
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com) [![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-FF6D00?style=for-the-badge)](https://github.com/ultralytics/ultralytics) [![Cerebras](https://img.shields.io/badge/Cerebras-Llama3.3-000000?style=for-the-badge)](https://www.cerebras.net)
 
 ---
 
-## 🛠️ Getting Started
+## ⚡ Getting Started
 
-### 1️⃣ Clone & Setup
+### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/ujpm/microsmart_pf.git
+git clone [https://github.com/ujpm/microsmart_pf.git](https://github.com/ujpm/microsmart_pf.git)
 cd microsmart_pf
+
 ```
 
-### 2️⃣ Backend 
-Create a `.env` file in `backend/` with your API key (example, DO NOT commit this file):
-```env
-CEREBRAS_API_KEY="REPLACE_WITH_YOUR_KEY"
-```
+### 2️⃣ Initialize Backend
 
-Then install and run:
+The backend handles image processing and AI inference.
+
+1. Create a virtual environment:
 ```bash
 cd backend
-pip install -r requirements.txt
-python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
 ```
 
-> Note: the server loads the Vision model at startup by default. If model loading is slow, consider lazy-loading or using the FastAPI startup event to preload models.
 
-### 3️⃣ Frontend
-Open a new terminal:
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+
+```
+
+
+3. **Configure API Keys:** Create a `.env` file in `backend/` and add your Cerebras key:
+```env
+CEREBRAS_API_KEY="csk-REPLACE_WITH_YOUR_KEY"
+
+```
+
+
+4. **Launch the Server:**
+*Note: We bind to `0.0.0.0` to ensure access from cloud IDEs (Codespaces/Gitpod).*
+```bash
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+
+```
+
+
+
+### 3️⃣ Initialize The Body (Frontend)
+
+The frontend is the interactive cockpit.
+
+1. Open a new terminal.
+2. Setup and run:
 ```bash
 cd frontend
 npm install
 npm run dev
-```
-Visit: `http://localhost:5173`
 
----
-
-## 📄 API (short)
-
-### POST /analyze
-- Accepts: `multipart/form-data` with field `file` (image/jpeg|png)
-- Response example:
-```json
-{
-  "analysis": {
-    "counts": {
-      "Red_Blood_Cell": 120,
-      "Trophozoite": 5
-    },
-    "parasitemia_pct": 4.16,
-    "annotated_image": "base64-encoded-jpeg-string"
-  },
-  "report": "Based on the elevated trophozoite count ... (markdown text)"
-}
 ```
 
-Implementation notes:
-- Vision Agent returns counts and an `annotated_image` (base64 JPG) for immediate preview.
-- Parasitemia calculation includes safe-division logic to avoid crashes when RBC count is zero.
 
----
-
-## 🧾 Troubleshooting
-
-- **ModuleNotFoundError: No module named 'src'**
-  - Ensure you run uvicorn from the backend/ root directory, not inside src/.
-  - Correct Command: `python -m uvicorn src.main:app --reload`
-- **Attribute 'app' not found**
-  - This occurs if src/main.py is missing the `app = FastAPI()` definition. Ensure the entry point defines the application instance.
+3. Access the workbench at: `http://localhost:5173`
 
 ---
 
@@ -93,19 +116,41 @@ Implementation notes:
 
 ```mermaid
 graph LR
-    User[Lab Tech] -->|Uploads Image| Frontend[React App]
-    Frontend -->|POST /analyze| Backend[FastAPI]
-    subgraph "AI Core"
-        Backend -->|Raw Image| Vision[YOLOv8 Vision Agent]
-        Vision -->|Counts & Bounding Boxes| Backend
-        Backend -->|JSON Data| Brain[Cerebras Agent]
-        Brain -->|Clinical Report| Backend
+    User[Lab Technician] -->|Uploads Batch| Cockpit[React Workbench]
+    Cockpit -->|Queue Management| Backend[FastAPI Server]
+    
+    subgraph "The Double-Engine"
+        Backend -->|Raw Slide| Vision[YOLOv8 'The Eye']
+        Vision -->|Bounding Boxes + Counts| Backend
+        Backend -->|Aggregated Data| Brain[Llama 3.3 'The Brain']
+        Brain -->|Clinical Pathology Report| Backend
     end
-    Backend -->| annotated_image + report | Frontend
+    
+    Backend -->|JSON Analysis| Cockpit
+    Cockpit -->|Visualizes| Display[Smart Viewer & Console]
+
 ```
 
 ---
 
-## 📜 License
+## ⌨️ Shortcuts
 
+| Key | Action |
+| --- | --- |
+| **Spacebar** | Toggle between AI Annotation and Raw Image |
+| **Arrow Right** | Next Slide |
+| **Arrow Left** | Previous Slide |
+
+---
+
+## 📜 Credits
+
+**Architecture & Development**
+Designed by **UJPM**
+
+**License**
 This project is open source under the MIT License. See `LICENSE` for details.
+
+```
+
+```
