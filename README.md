@@ -28,10 +28,10 @@ git clone https://github.com/ujpm/microsmart_pf.git
 cd microsmart_pf
 ```
 
-### 2️⃣ Backend (The Brain)
+### 2️⃣ Backend 
 Create a `.env` file in `backend/` with your API key (example, DO NOT commit this file):
 ```env
-CEREBRAS_API_KEY="csk-REPLACE_WITH_YOUR_KEY"
+CEREBRAS_API_KEY="REPLACE_WITH_YOUR_KEY"
 ```
 
 Then install and run:
@@ -43,7 +43,7 @@ python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 > Note: the server loads the Vision model at startup by default. If model loading is slow, consider lazy-loading or using the FastAPI startup event to preload models.
 
-### 3️⃣ Frontend (The Body)
+### 3️⃣ Frontend
 Open a new terminal:
 ```bash
 cd frontend
