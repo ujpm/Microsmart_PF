@@ -7,12 +7,37 @@ import { BrainConsole } from './components/BrainConsole';
 
 function App() {
   const { session, analyzeBatch, isProcessing, progressMsg, globalReport } = useAnalysis();
+  
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // --- NEW STATE: Sidebar Collapsibility ---
+  const [isFilmstripCollapsed, setIsFilmstripCollapsed] = useState(false);
+  const [isBrainConsoleCollapsed, setIsBrainConsoleCollapsed] = useState(false);
+
+  // --- Handlers ---
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       analyzeBatch(Array.from(e.target.files));
+      setSelectedSlideIndex(0); // Reset to first slide
+    }
+  };
+
+  const handleAddFiles = (newFiles: File[]) => {
+    // Combine existing files with the new ones and re-run batch
+    const currentFiles = session.map(s => s.originalFile);
+    analyzeBatch([...currentFiles, ...newFiles]);
+  };
+
+  const handleDeleteSlide = (id: string) => {
+    // Filter out the deleted slide and re-run batch
+    const currentFiles = session.filter(s => s.id !== id).map(s => s.originalFile);
+    if (currentFiles.length === 0) {
+       // If they deleted the last slide, passing an empty array will trigger the empty state UI
+       analyzeBatch([]);
+    } else {
+       analyzeBatch(currentFiles);
+       setSelectedSlideIndex(0); // Safely reset index so it doesn't break
     }
   };
 
@@ -42,9 +67,30 @@ function App() {
           </div>
         ) : (
           <>
-            <Filmstrip session={session} selectedIndex={selectedSlideIndex} onSelect={setSelectedSlideIndex} />
+            <Filmstrip 
+              session={session} 
+              selectedIndex={selectedSlideIndex} 
+              onSelect={setSelectedSlideIndex} 
+              
+              // --- FIX: Missing Props Added Here ---
+              isCollapsed={isFilmstripCollapsed}
+              onToggle={() => setIsFilmstripCollapsed(!isFilmstripCollapsed)}
+              onAddFiles={handleAddFiles}
+              onDeleteSlide={handleDeleteSlide}
+            />
+            
             <SmartViewer activeSlide={session[selectedSlideIndex]} />
-            <BrainConsole report={globalReport} isProcessing={isProcessing} progressMsg={progressMsg} />
+            
+            <BrainConsole 
+              report={globalReport} 
+              isProcessing={isProcessing} 
+              progressMsg={progressMsg} 
+              
+              // --- FIX: Missing Props Added Here ---
+              activeSlideData={session[selectedSlideIndex]?.result}
+              isCollapsed={isBrainConsoleCollapsed}
+              onToggle={() => setIsBrainConsoleCollapsed(!isBrainConsoleCollapsed)}
+            />
           </>
         )}
       </main>
