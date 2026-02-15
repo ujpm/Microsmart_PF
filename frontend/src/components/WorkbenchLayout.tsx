@@ -84,7 +84,13 @@ export const WorkbenchLayout: React.FC<WorkbenchLayoutProps> = ({
         {isEmptySession ? (
            // STATE B1: Empty Workbench -> Show Upload Zone
            <div className="flex-1 flex flex-col items-center justify-center bg-dots-pattern relative">
-              <UploadZone onFilesSelected={onAddFiles} isProcessing={isProcessing} />
+              <UploadZone 
+               onFileSelect={(f) => onAddFiles([f])} 
+               onAnalyze={() => {}} 
+               file={null} 
+               previewUrl={null} 
+               loading={isProcessing} 
+              />
            </div>
         ) : (
            // STATE B2: Active Viewer

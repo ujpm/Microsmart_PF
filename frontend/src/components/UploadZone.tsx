@@ -1,92 +1,84 @@
-import React, { useRef } from 'react';
-import { Upload, FileImage, ShieldAlert } from 'lucide-react';
+import React from 'react';
+import { Upload, Play, Microscope } from 'lucide-react';
 
 interface UploadZoneProps {
-  onFilesSelected: (files: File[]) => void;
-  isProcessing?: boolean;
+  onFileSelect: (file: File) => void;
+  onAnalyze: () => void;
+  file: File | null;
+  previewUrl: string | null;
+  loading: boolean;
 }
 
-export const UploadZone: React.FC<UploadZoneProps> = ({ onFilesSelected, isProcessing }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFilesSelected(Array.from(e.dataTransfer.files));
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      onFilesSelected(Array.from(e.target.files));
-    }
-  };
-
+export const UploadZone: React.FC<UploadZoneProps> = ({ 
+  onFileSelect, 
+  onAnalyze, 
+  file, 
+  previewUrl, 
+  loading 
+}) => {
   return (
-    <div 
-      className="max-w-2xl w-full mx-auto"
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      <div 
-        className={`
-          relative group cursor-pointer
-          bg-slate-900/50 hover:bg-slate-900/80 
-          border-2 border-dashed border-slate-700 hover:border-cyan-500/50 
-          rounded-3xl p-12 transition-all duration-300
-          flex flex-col items-center text-center
-          ${isProcessing ? 'opacity-50 pointer-events-none' : ''}
-        `}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {/* Glow Effect on Hover */}
-        <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl" />
-
-        <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300 relative z-10">
-          <Upload className="text-cyan-400" size={32} />
-        </div>
-
-        <h2 className="text-2xl font-bold text-white mb-2 relative z-10">
-          Upload Slide Images
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-bold text-slate-800 flex items-center">
+          <Microscope className="mr-2 text-blue-600" size={20} />
+          Sample Acquisition
         </h2>
-        
-        <p className="text-slate-400 max-w-md mb-8 relative z-10">
-          Drag & drop high-resolution thin blood smears here, or click to browse.
-          Supports JPG/PNG (Max 20MB).
-        </p>
+        {file && !loading && (
+          <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
+            IMAGE READY
+          </span>
+        )}
+      </div>
 
-        <div className="flex gap-4 relative z-10">
-           <div className="flex items-center text-xs font-mono text-slate-500 bg-slate-950 px-3 py-1.5 rounded border border-slate-800">
-             <FileImage size={12} className="mr-2" />
-             .JPG, .PNG
-           </div>
-           <div className="flex items-center text-xs font-mono text-slate-500 bg-slate-950 px-3 py-1.5 rounded border border-slate-800">
-             <ShieldAlert size={12} className="mr-2" />
-             NO PHI
-           </div>
-        </div>
-
-        <input 
-          type="file" 
-          multiple 
-          ref={fileInputRef} 
-          className="hidden" 
-          accept="image/*"
-          onChange={handleFileInput}
+      <div className="relative group transition-all">
+        <input
+          type="file"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+          onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
+          disabled={loading}
         />
+        
+        <div className={`
+          border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all
+          ${previewUrl ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200 bg-slate-50 hover:border-blue-400'}
+          ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+        `}>
+          {previewUrl ? (
+            <img src={previewUrl} alt="Preview" className="max-h-64 rounded-lg shadow-md object-contain" />
+          ) : (
+            <>
+              <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+                <Upload className="text-blue-600" size={32} />
+              </div>
+              <p className="text-slate-600 font-medium">Upload Thin Smear Image</p>
+              <p className="text-slate-400 text-xs mt-1">Supports JPG, PNG</p>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="mt-8 text-center">
-        <p className="text-slate-600 text-xs">
-          By uploading, you confirm these are research samples containing no Patient Health Information (PHI).
-        </p>
-      </div>
+      <button
+        onClick={onAnalyze}
+        disabled={!file || loading}
+        className={`
+          w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center transition-all
+          ${!file || loading 
+            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100 active:scale-[0.98]'}
+        `}
+      >
+        {loading ? (
+          <>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+            Agents Collaborating...
+          </>
+        ) : (
+          <>
+            <Play className="mr-2" size={18} fill="currentColor" />
+            Start Research Analysis
+          </>
+        )}
+      </button>
     </div>
   );
 };

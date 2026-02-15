@@ -1,141 +1,125 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './App.css';
 import { useAnalysis } from './hooks/useAnalysis';
 
-// Components
-import { Filmstrip } from './components/Filmstrip';
-import { SmartViewer } from './components/SmartViewer';
-import { BrainConsole } from './components/BrainConsole';
+// Restore ALL your custom components
+import { Navbar } from './components/Navbar';
+import { LandingPage } from './components/LandingPage';
+import { Footer } from './components/Footer';
+import { Header } from './components/Header';
+import { UploadZone } from './components/UploadZone';
+import { StatGrid } from './components/StatGrid';
 
 function App() {
-  const { session, analyzeBatch, isProcessing, progressMsg, globalReport } = useAnalysis();
+  // Navigation State
+  const [currentView, setCurrentView] = useState<'home' | 'analysis'>('home');
   
-  const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
-  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // File Upload State
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // NEW: UI State for sidebars to satisfy TypeScript
-  const [isFilmstripCollapsed, setIsFilmstripCollapsed] = useState(false);
-  const [isBrainCollapsed, setIsBrainCollapsed] = useState(false);
+  // Our robust, working API hook
+  const { session, analyzeBatch, isProcessing, progressMsg, globalReport } = useAnalysis();
 
-  // Check Backend Status on Load
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-        const API_URL = rawApiUrl.replace(/\/$/, ""); 
-        
-        const res = await fetch(`${API_URL}/`); 
-        if (res.ok) {
-          setBackendStatus('online');
-        } else {
-          setBackendStatus('offline');
-        }
-      } catch (e) {
-        setBackendStatus('offline');
-      }
-    };
-    
-    checkStatus();
-    const interval = setInterval(checkStatus, 30000); 
-    return () => clearInterval(interval);
-  }, []);
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      analyzeBatch(Array.from(e.target.files));
-      setSelectedSlideIndex(0);
+  const handleAnalyze = () => {
+    if (selectedFile) {
+      analyzeBatch([selectedFile]);
     }
   };
 
+  // Map the new API data structure safely back to your StatGrid component
+  const activeResult = session[0]?.result;
+  const statData = activeResult ? {
+    Red_Blood_Cell: activeResult.detailed_counts?.Red_Blood_Cell || 0,
+    Leukocyte: activeResult.detailed_counts?.Leukocyte || 0,
+    Ring: activeResult.detailed_counts?.Ring || 0,
+    Trophozoite: activeResult.detailed_counts?.Trophozoite || 0,
+    Gametocyte: activeResult.detailed_counts?.Gametocyte || 0,
+    Schizont: activeResult.detailed_counts?.Schizont || 0,
+    // StatGrid expects a number, so we parse "1.50%" into 1.50
+    parasitemia_pct: parseFloat(activeResult.parasitemia_calculation?.value) || 0 
+  } : null;
+
   return (
-    <div className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-inter">
-      
-      {/* 1. Global Navigation */}
-      <header className="h-14 bg-slate-900 border-b border-cyan-900/30 flex items-center px-6 justify-between shrink-0 z-50">
-        <div className="flex items-center gap-3">
-           <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center font-bold text-black">MS</div>
-           <h1 className="text-lg font-bold tracking-wider text-slate-200">
-             MICROSMART <span className="text-cyan-400 font-light">PF</span>
-           </h1>
-        </div>
-        
-        <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs font-mono border border-slate-700 px-2 py-1 rounded bg-slate-950">
-                <span className={`w-2 h-2 rounded-full ${
-                    backendStatus === 'online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
-                    backendStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
-                }`} />
-                <span className={
-                    backendStatus === 'online' ? 'text-green-400' : 
-                    backendStatus === 'offline' ? 'text-red-400' : 'text-yellow-400'
-                }>
-                    {backendStatus === 'online' ? 'SYSTEM ONLINE' : 
-                     backendStatus === 'offline' ? 'BRAIN DISCONNECTED' : 'CONNECTING...'}
-                </span>
-            </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col font-inter">
+      {/* 1. Navbar */}
+      <Navbar 
+        onHomeClick={() => setCurrentView('home')} 
+        onAnalysisClick={() => setCurrentView('analysis')} 
+      />
 
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 rounded text-sm font-medium transition-colors border border-slate-700"
-            >
-               New Session
-            </button>
-        </div>
-      </header>
+      {/* 2. Main Content Routing */}
+      {currentView === 'home' ? (
+        <LandingPage onStart={() => setCurrentView('analysis')} />
+      ) : (
+        <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
+          
+          {/* Your HUD Banner */}
+          <Header />
 
-      {/* 2. Main Workstation Area */}
-      <main className="flex-1 flex overflow-hidden">
-        
-        {session.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center bg-slate-950 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900 via-slate-950 to-slate-950" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
             
-            <div 
-              className="z-10 border-2 border-dashed border-slate-700 rounded-3xl p-16 text-center hover:border-cyan-500 hover:bg-slate-900/50 transition-all cursor-pointer group"
-              onClick={() => fileInputRef.current?.click()}
-            >
-               <div className="text-7xl mb-6 group-hover:scale-110 transition-transform duration-300">🔬</div>
-               <h2 className="text-3xl font-bold text-white mb-2">Initialize Session</h2>
-               <p className="text-slate-400">Drop 1-10 slide images here to begin analysis</p>
-               <input 
-                 type="file" 
-                 multiple 
-                 ref={fileInputRef} 
-                 className="hidden" 
-                 onChange={handleFiles} 
-                 accept="image/*"
-               />
+            {/* Left Column: Upload & Vision Result */}
+            <div className="lg:col-span-1 space-y-6">
+              <UploadZone
+                onFileSelect={handleFileSelect} // FIX: Matches your UploadZone component
+                onAnalyze={handleAnalyze}
+                file={selectedFile}
+                previewUrl={activeResult ? activeResult.annotated_image : previewUrl}
+                loading={isProcessing}
+              />
             </div>
+
+            {/* Right Column: Stats & Brain Agent */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Your Parameter Table */}
+              {statData ? (
+                 <StatGrid data={statData} />
+              ) : (
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center h-32 text-slate-400 italic">
+                   Awaiting vision metrics...
+                </div>
+              )}
+
+              {/* Brain Agent Clinical Report Area */}
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 min-h-[300px]">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
+                  <div className={`w-2 h-2 rounded-full ${isProcessing ? 'bg-amber-400 animate-pulse' : 'bg-purple-500'}`} />
+                  <h2 className="text-lg font-bold text-slate-800">Cerebras Clinical Assessment</h2>
+                </div>
+                
+                {isProcessing ? (
+                  <div className="flex flex-col items-center justify-center py-16 space-y-4">
+                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-blue-600 font-medium animate-pulse">
+                      {progressMsg || "Waiting for assessment..."}
+                    </p>
+                  </div>
+                ) : globalReport ? (
+                  <article className="prose prose-slate prose-sm max-w-none prose-headings:text-blue-700 prose-a:text-blue-600">
+                    <ReactMarkdown>{globalReport}</ReactMarkdown>
+                  </article>
+                ) : (
+                  <div className="text-slate-400 italic text-center py-16">
+                    Upload a sample to generate clinical insights.
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
-        ) : (
-          <>
-            <Filmstrip 
-              session={session} 
-              selectedIndex={selectedSlideIndex} 
-              onSelect={setSelectedSlideIndex} 
-              // Added Missing Props:
-              isCollapsed={isFilmstripCollapsed}
-              onToggle={() => setIsFilmstripCollapsed(!isFilmstripCollapsed)}
-              onAddFiles={() => fileInputRef.current?.click()}
-              onDeleteSlide={(id) => console.log("Deletion temporarily disabled", id)}
-            />
-            
-            <SmartViewer 
-              activeSlide={session[selectedSlideIndex]} 
-            />
-            
-            <BrainConsole 
-              report={globalReport} 
-              isProcessing={isProcessing} 
-              progressMsg={progressMsg}
-              // Added Missing Props:
-              isCollapsed={isBrainCollapsed}
-              onToggle={() => setIsBrainCollapsed(!isBrainCollapsed)}
-            />
-          </>
-        )}
-      </main>
+        </main>
+      )}
+
+      {/* 3. Your Custom Footer */}
+      <Footer />
     </div>
   );
 }
