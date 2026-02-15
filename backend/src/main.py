@@ -8,6 +8,7 @@ import shutil
 import os
 import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
@@ -25,14 +26,19 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# --- CORS Configuration ---
+# --- 1. SETUP STATIC MOUNT (For Memory Optimization) ---
+os.makedirs("static/results", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# --- 2. CORS CONFIGURATION (THE FIX) ---
 origins = [
-    "http://localhost:5173",                 # Local Development
-    "https://app.microsmartpf.xyz",          # Production Frontend
-    "https://microsmartpf.pages.dev",           # Backup Domain
+    "http://localhost:5173",                 # Local Dev
+    "https://app.microsmartpf.xyz",          # Production Custom Domain
+    "https://pf.microsmartpf.xyz",           # Backup Custom Domain
+    "https://microsmartpf.pages.dev",        # Cloudflare Default URL (FIXED!)
 ]
 
-# Wildcard to allow any Codespaces instance to work automatically
+# Allow any GitHub Codespaces URL
 origin_regex = r"https://.*\.app\.github\.dev"
 
 app.add_middleware(
@@ -91,12 +97,13 @@ async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
         with open(temp_filename, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        vision_results = vision_bot.analyze_image(temp_filename)
+        # --- 3. MISSING ARGUMENT FIX ---
+        # Pass file.filename to satisfy the VisionAgent signature
+        vision_results = vision_bot.analyze_image(temp_filename, file.filename)
 
         if mode == "vision_only":
             return {"analysis": vision_results}
 
-        # Legacy Mode (Single Image Full Report)
         if not brain_bot:
             return {
                 "analysis": vision_results,
@@ -115,9 +122,6 @@ async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
 
 @app.post("/diagnose")
 async def diagnose_session(data: DiagnoseRequest):
-    """
-    Generates a report from AGGREGATED session data.
-    """
     if not brain_bot:
         raise HTTPException(
             status_code=503, 

@@ -9,41 +9,85 @@ Author: MicroSmart Team
 
 import os
 import logging
-from cerebras.cloud.sdk import Cerebras
-from src import config
+from typing import Dict
+# Fix: Correcting the import based on actual cerebras SDK usage
+try:
+    from cerebras.cloud.sdk import Cerebras
+except ImportError:
+    # Fallback/mock if sdk isn't installed perfectly in the environment yet
+    Cerebras = None
+    logging.warning("cerebras_cloud_sdk not found. Please install it.")
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class BrainAgent:
     def __init__(self):
-        self.client = Cerebras(api_key=os.environ.get("CEREBRAS_API_KEY"))
-        self.model = "llama-3.3-70b"
+        self.api_key = os.environ.get("CEREBRAS_API_KEY")
+        if not self.api_key:
+            logger.error("CEREBRAS_API_KEY environment variable is not set.")
+            raise EnvironmentError("Missing Cerebras API Key")
+        
+        if Cerebras is None:
+            raise ImportError("Cerebras SDK is not installed.")
+            
+        self.client = Cerebras(api_key=self.api_key)
+        # Fix: Updating to the currently supported Llama 3.3 model string on Cerebras
+        self.model_id = "llama3.3-70b" 
 
-    def generate_report(self, vision_data: dict) -> str:
-        # Extract Data
+    def generate_report(self, vision_data: Dict) -> str:
+        # --- FIX: Match keys with what main.py actually sends ---
         counts = vision_data.get('detailed_counts', {})
-        parasitemia = vision_data.get('parasitemia_calculation', {}).get('value', 'N/A')
-        total = vision_data.get('total_parasites', 0)
+        total_parasites = vision_data.get('total_parasites', 0)
+        
+        # Safely extract parasitemia depending on how it's nested
+        parasitemia = "N/A"
+        if 'parasitemia_calculation' in vision_data:
+            parasitemia = vision_data['parasitemia_calculation'].get('value', 'N/A')
+        elif 'parasitemia_pct' in vision_data:
+             parasitemia = vision_data['parasitemia_pct']
+
+        # CLINICAL CONTEXT: Rwandan National Malaria Guidelines focus
+        system_prompt = (
+            "You are an expert Malariologist at a District Hospital in Rwanda. "
+            "Your goal is maximum sensitivity. If any parasites are detected, you must report a positive case. "
+            "P. falciparum is the most common and dangerous species in the region. "
+            "Provide professional, concise, and actionable diagnosis following WHO and Rwandan guidelines."
+        )
 
         user_prompt = f"""
-        DATA INPUT:
-        - Parasitemia: {parasitemia}
-        - Total Parasites: {total}
-        - Breakdown: {counts}
+        LABORATORY DATA:
+        - Total Parasites Detected: {total_parasites}
+        - Computed Parasitemia: {parasitemia}
         
-        Generate a diagnostic summary.
+        CELL BREAKDOWN:
+        - Red Blood Cells (RBC): {counts.get('Red_Blood_Cell', 0)}
+        - White Blood Cells (WBC): {counts.get('Leukocyte', 0)}
+        - Ring Stages: {counts.get('Ring', 0)}
+        - Trophozoites: {counts.get('Trophozoite', 0)}
+        - Gametocytes: {counts.get('Gametocyte', 0)}
+        - Schizonts: {counts.get('Schizont', 0)}
+
+        TASK:
+        1. **Final Diagnosis**: Is this Positive for Malaria? (Even 1 Ring stage is a Positive). Specify species likelihood (primarily P. falciparum).
+        2. **Severity Classification**: (Uncomplicated vs Severe). Note: Any neurological signs or >5% parasitemia indicate severe malaria in Rwanda.
+        3. **Rwandan Protocol**: If positive, suggest Artemether-Lumefantrine (Coartem) for uncomplicated or IV Artesunate for severe cases.
+        4. **Laboratory Note**: If parasite count is low (<0.1%), advise a second smear for confirmation.
         """
 
         try:
+            logger.info("Generating Clinical Report via Cerebras...")
             response = self.client.chat.completions.create(
-                model=self.model,
+                model=self.model_id,
                 messages=[
-                    {"role": "system", "content": config.SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.1
+                temperature=0.1, # Keep it extremely factual
+                max_tokens=600
             )
             return response.choices[0].message.content
+        
         except Exception as e:
-            logger.error(f"Brain Error: {e}")
-            return "Error: MicroSmart reasoning engine unavailable."
+            logger.error(f"Brain Agent Failure: {e}")
+            return f"Error: Clinical reasoning engine offline. Details: {str(e)}"

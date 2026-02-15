@@ -8,108 +8,123 @@ in microscopic images.
 
 import logging
 import cv2
+import os
 import numpy as np
+from typing import Dict, Any
 from ultralytics import YOLO
-from src import config  # Import central config
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class VisionAgent:
     def __init__(self, model_path: str = "models/best.pt"):
-        self.model = YOLO(model_path)
+        try:
+            logger.info(f"Loading Vision Model from: {model_path}")
+            self.model = YOLO(model_path)
+        except Exception as e:
+            logger.error(f"Failed to load YOLO model: {e}")
+            raise
 
-    def analyze_image(self, image_path: str, file_id: str):
-        # 1. Inference
-        results = self.model.predict(image_path, conf=0.15, verbose=False)
-        result = results[0]
+    # UPDATED: Now accepts file_id to name the output file
+    def analyze_image(self, image_path: str, file_id: str) -> Dict[str, Any]:
+        logger.info(f"Running inference on: {image_path}")
         
-        # 2. Dynamic Font Scaling Logic
-        h, w = result.orig_shape[:2]
-        # Calculate scale: 1500px -> 0.5, 3000px -> 1.0
-        font_scale = max(w, h) / config.BASE_IMAGE_SIZE * config.BASE_FONT_SCALE
-        font_scale = max(font_scale, 0.4) # Never go below 0.4
-        thickness = max(1, int(font_scale * 2))
-        font_scale = font_scale * 2.5 
-        thickness = max(1, int(font_scale * 2))
+        results = self.model.predict(image_path, conf=0.25, verbose=False)
+        result = results[0] 
 
-        # 3. Process Detections
         counts = {
             "Red_Blood_Cell": 0, "Leukocyte": 0, 
             "Ring": 0, "Trophozoite": 0, "Gametocyte": 0, "Schizont": 0
         }
-        
-        annotated_img = result.orig_img.copy()
+        boxes_to_draw = []
 
         for box in result.boxes:
             class_id = int(box.cls[0])
-            name = self.model.names[class_id].lower()
+            raw_name = self.model.names[class_id].lower()
             conf = float(box.conf[0])
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            
+            label_text = ""
+            color = (150, 150, 150)
+            is_parasite = False
 
-            # Label Logic
-            label = ""
-            color = (100, 100, 100)
-
-            if "rbc" in name or "red_blood" in name:
+            if "rbc" in raw_name or "red_blood_cell" in raw_name:
                 counts["Red_Blood_Cell"] += 1
-                # RBCs: No bounding box to keep image clean
-            
-            elif "leukocyte" in name or "wbc" in name:
+            elif "leukocyte" in raw_name or "wbc" in raw_name:
                 counts["Leukocyte"] += 1
-                color = (255, 0, 255) # Magenta
-                label = "WBC"
-            
+                label_text = "WBC"
+                color = (255, 0, 255)
             else:
-                # Parasites (Cyan)
+                is_parasite = True
                 color = (0, 255, 255)
-                code = "Pf?"
-                if "ring" in name: 
-                    counts["Ring"] += 1; code = "PfR"
-                elif "trophozoite" in name: 
-                    counts["Trophozoite"] += 1; code = "PfT"
-                elif "gametocyte" in name: 
-                    counts["Gametocyte"] += 1; code = "PfG"
-                elif "schizont" in name: 
-                    counts["Schizont"] += 1; code = "PfS"
-                elif "vivax" in name or "falciparum" in name:
-                    counts["Trophozoite"] += 1; code = "PfT" # The Patch
-                
-                label = f"{code} {conf:.2f}"
+                stage_code = "Pf?"
+                if "ring" in raw_name: 
+                    counts["Ring"] += 1
+                    stage_code = "PfR"
+                elif "trophozoite" in raw_name: 
+                    counts["Trophozoite"] += 1
+                    stage_code = "PfT"
+                elif "gametocyte" in raw_name: 
+                    counts["Gametocyte"] += 1
+                    stage_code = "PfG"
+                elif "schizont" in raw_name: 
+                    counts["Schizont"] += 1
+                    stage_code = "PfS"
+                elif "vivax" in raw_name or "falciparum" in raw_name:
+                    counts["Trophozoite"] += 1
+                    stage_code = "PfT"
 
-            # Draw (if label exists)
-            if label:
-                cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, thickness)
-                (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-                cv2.rectangle(annotated_img, (x1, y1 - th - 5), (x1 + tw, y1), color, -1)
-                cv2.putText(annotated_img, label, (x1, y1 - 4), 
-                           cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
+                label_text = f"{stage_code} {conf:.2f}"
 
-        # 4. Save Image to Static Disk
-        filename = f"analyzed_{file_id}.jpg"
-        output_path = config.RESULTS_DIR / filename
-        cv2.imwrite(str(output_path), annotated_img)
+            if label_text: 
+                boxes_to_draw.append({
+                    "coords": box.xyxy[0],
+                    "label": label_text,
+                    "color": color,
+                    "is_parasite": is_parasite
+                })
 
-        # 5. Parasitemia Math
-        total_p = counts["Ring"] + counts["Trophozoite"] + counts["Gametocyte"] + counts["Schizont"]
-        detected_rbc = counts["Red_Blood_Cell"]
+        # Draw
+        annotated_bgr = result.orig_img.copy()
+        for item in boxes_to_draw:
+            x1, y1, x2, y2 = map(int, item["coords"])
+            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), item["color"], 2)
+            (w, h), _ = cv2.getTextSize(item["label"], cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
+            cv2.rectangle(annotated_bgr, (x1, y1 - 15), (x1 + w, y1), item["color"], -1)
+            cv2.putText(annotated_bgr, item["label"], (x1, y1 - 4), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+
+        # --- SAVE TO DISK ---
+        # Clean filename to avoid issues
+        clean_id = os.path.basename(file_id)
+        output_filename = f"annotated_{clean_id}"
+        save_path = os.path.join("static/results", output_filename)
         
-        # Use the MAX of detected RBCs or the Safety Floor (150)
-        effective_rbc = max(detected_rbc, config.MIN_RBC_PER_FIELD)
+        cv2.imwrite(save_path, annotated_bgr)
         
+        # Return Relative URL
+        image_url = f"/static/results/{output_filename}"
+        # ---------------------
+
+        total_parasites = sum([counts["Ring"], counts["Trophozoite"], counts["Gametocyte"], counts["Schizont"]])
+        total_rbc = counts["Red_Blood_Cell"]
+
         parasitemia_str = "N/A"
-        if effective_rbc > 0:
-            # Standard Formula: P / RBC * 100
-            val = (total_p / effective_rbc) * 100
-            parasitemia_str = f"{val:.2f}%"
+        if total_rbc > total_parasites:
+            p_val = (total_parasites / (total_rbc + total_parasites)) * 100
+            parasitemia_str = f"{p_val:.2f}%"
 
         return {
-            "summary_headline": f"{total_p} Parasites Detected",
-            "total_parasites": total_p,
+            "summary_headline": f"{total_parasites} Parasites Detected", 
+            "total_parasites": total_parasites,
             "parasitemia_calculation": {
+                "status": "Success" if parasitemia_str != "N/A" else "Insufficient RBCs",
                 "value": parasitemia_str,
-                "rbc_used": effective_rbc,
-                "note": "Used Safety Floor" if detected_rbc < config.MIN_RBC_PER_FIELD else "Actual Count"
+                "rbc_count": total_rbc
             },
             "detailed_counts": counts,
-            "image_url": f"/static/results/{filename}" # Returning URL now!
+            "annotated_image": image_url, # URL sent to frontend
+            "image_metadata": {
+                "height": result.orig_shape[0],
+                "width": result.orig_shape[1]
+            }
         }
