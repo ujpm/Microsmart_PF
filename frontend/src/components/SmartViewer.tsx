@@ -23,12 +23,12 @@ export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
     );
   }
 
-  // 2. Construct Source URL
-  // We append a timestamp to bust the browser cache if you re-analyze the same file
+// 2. Construct Source URL
+  // We read the raw Base64 string sent directly from the Vision Agent
   const aiImageSrc = activeSlide.result 
-    ? `${API_URL}${activeSlide.result.annotated_image}?t=${Date.now()}` 
+    ? `data:image/jpeg;base64,${activeSlide.result.annotated_image}` 
     : null;
-
+    
   const rawImageSrc = URL.createObjectURL(activeSlide.originalFile);
   
   const isAiReady = !!aiImageSrc;
