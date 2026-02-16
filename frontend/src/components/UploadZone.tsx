@@ -1,84 +1,50 @@
 import React from 'react';
-import { Upload, Play, Microscope } from 'lucide-react';
+import { Microscope, UploadCloud } from 'lucide-react';
 
 interface UploadZoneProps {
-  onFileSelect: (file: File) => void;
-  onAnalyze: () => void;
-  file: File | null;
-  previewUrl: string | null;
+  onFileSelect: (files: File[]) => void; // CHANGED to accept an array of files
   loading: boolean;
 }
 
 export const UploadZone: React.FC<UploadZoneProps> = ({ 
   onFileSelect, 
-  onAnalyze, 
-  file, 
-  previewUrl, 
   loading 
 }) => {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center">
-          <Microscope className="mr-2 text-blue-600" size={20} />
-          Sample Acquisition
+    <div className="w-full max-w-2xl bg-slate-900/50 p-8 rounded-3xl shadow-2xl border border-slate-800 backdrop-blur-md">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-xl font-bold text-slate-200 flex items-center">
+          <Microscope className="mr-3 text-cyan-500" size={24} />
+          Initialize Analysis Session
         </h2>
-        {file && !loading && (
-          <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
-            IMAGE READY
-          </span>
-        )}
       </div>
 
       <div className="relative group transition-all">
+        {/* Added 'multiple' and 'accept' attributes */}
         <input
           type="file"
+          multiple
+          accept="image/*"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          onChange={(e) => e.target.files?.[0] && onFileSelect(e.target.files[0])}
+          onChange={(e) => {
+             if (e.target.files && e.target.files.length > 0) {
+               onFileSelect(Array.from(e.target.files));
+             }
+          }}
           disabled={loading}
         />
         
         <div className={`
-          border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all
-          ${previewUrl ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200 bg-slate-50 hover:border-blue-400'}
-          ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+          border-2 border-dashed rounded-2xl p-16 flex flex-col items-center justify-center transition-all
+          ${loading ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-900' : 'border-slate-600 bg-slate-900/80 hover:border-cyan-500 hover:bg-slate-800/80'}
         `}>
-          {previewUrl ? (
-            <img src={previewUrl} alt="Preview" className="max-h-64 rounded-lg shadow-md object-contain" />
-          ) : (
-            <>
-              <div className="bg-white p-4 rounded-full shadow-sm mb-4">
-                <Upload className="text-blue-600" size={32} />
-              </div>
-              <p className="text-slate-600 font-medium">Upload Thin Smear Image</p>
-              <p className="text-slate-400 text-xs mt-1">Supports JPG, PNG</p>
-            </>
-          )}
+          <div className="bg-slate-950 p-5 rounded-full shadow-inner border border-slate-800 mb-6 group-hover:scale-110 transition-transform">
+            <UploadCloud className="text-cyan-500" size={40} />
+          </div>
+          <p className="text-slate-300 font-bold text-lg mb-2">Drop up to 10 Thin Smear Images</p>
+          <p className="text-slate-500 text-sm">Supports JPG, PNG formats</p>
         </div>
       </div>
-
-      <button
-        onClick={onAnalyze}
-        disabled={!file || loading}
-        className={`
-          w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center transition-all
-          ${!file || loading 
-            ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100 active:scale-[0.98]'}
-        `}
-      >
-        {loading ? (
-          <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-            Agents Collaborating...
-          </>
-        ) : (
-          <>
-            <Play className="mr-2" size={18} fill="currentColor" />
-            Start Research Analysis
-          </>
-        )}
-      </button>
     </div>
   );
 };

@@ -80,20 +80,15 @@ export const WorkbenchLayout: React.FC<WorkbenchLayoutProps> = ({
           onDeleteSlide={onDeleteSlide}
         />
         
-        {/* CENTER STAGE */}
+{/* CENTER STAGE */}
         {isEmptySession ? (
-           // STATE B1: Empty Workbench -> Show Upload Zone
-           <div className="flex-1 flex flex-col items-center justify-center bg-dots-pattern relative">
+           <div className="flex-1 flex flex-col items-center justify-center bg-slate-950 relative">
               <UploadZone 
-               onFileSelect={(f) => onAddFiles([f])} 
-               onAnalyze={() => {}} 
-               file={null} 
-               previewUrl={null} 
+               onFileSelect={(files) => onAddFiles(files)} 
                loading={isProcessing} 
               />
            </div>
         ) : (
-           // STATE B2: Active Viewer
            <SmartViewer activeSlide={activeSlide} />
         )}
         
