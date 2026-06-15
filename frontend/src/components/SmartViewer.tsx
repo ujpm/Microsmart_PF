@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'; // <-- ADDED
+import { ZoomIn, ZoomOut, Maximize } from 'lucide-react'; // <-- ADDED for UI buttons
 import { type SessionItem } from '../hooks/useAnalysis';
 
 interface SmartViewerProps {
@@ -7,10 +9,6 @@ interface SmartViewerProps {
 
 export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
   const [showOriginal, setShowOriginal] = useState(false);
-
-  // 1. Prepare API Base URL
-  const rawApiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const API_URL = rawApiUrl.replace(/\/$/, ""); 
 
   if (!activeSlide) {
     return (
@@ -23,8 +21,6 @@ export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
     );
   }
 
-// 2. Construct Source URL
-  // We read the raw Base64 string sent directly from the Vision Agent
   const aiImageSrc = activeSlide.result 
     ? `data:image/jpeg;base64,${activeSlide.result.annotated_image}` 
     : null;
@@ -66,7 +62,7 @@ export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 relative bg-dots-pattern">
+      <div className="flex-1 flex items-center justify-center relative bg-dots-pattern overflow-hidden">
          {activeSlide.status === 'processing' && (
            <div className="absolute inset-0 bg-black/60 z-20 flex flex-col items-center justify-center backdrop-blur-sm">
              <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
@@ -74,11 +70,27 @@ export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
            </div>
          )}
          
-         <img 
-           src={displaySrc || undefined} 
-           alt="Microscope Slide" 
-           className="max-h-full max-w-full object-contain shadow-2xl border border-slate-800"
-         />
+         {/* --- PROFESSIONAL ZOOM COMPONENT --- */}
+         <TransformWrapper initialScale={1} minScale={0.5} maxScale={8}>
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <>
+              {/* Floating Zoom Controls */}
+              <div className="absolute bottom-6 right-6 z-30 flex flex-col gap-2 bg-slate-900/80 p-2 rounded-xl border border-slate-700 backdrop-blur-md">
+                <button onClick={() => zoomIn()} className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"><ZoomIn size={20}/></button>
+                <button onClick={() => zoomOut()} className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"><ZoomOut size={20}/></button>
+                <button onClick={() => resetTransform()} className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"><Maximize size={20}/></button>
+              </div>
+
+              <TransformComponent wrapperClass="w-full h-full flex items-center justify-center">
+                <img 
+                  src={displaySrc || undefined} 
+                  alt="Microscope Slide" 
+                  className="max-h-full max-w-full object-contain shadow-2xl"
+                />
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
       </div>
     </div>
   );

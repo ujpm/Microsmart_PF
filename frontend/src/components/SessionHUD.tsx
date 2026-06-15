@@ -14,29 +14,23 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
   const pctVal = parseFloat(pctStr);
   const isHighRisk = !isNaN(pctVal) && pctVal > 2.0;
 
-  // --- NEW DYNAMIC LOGIC: Determine Dominant Species ---
-  const getDominantSpecies = (counts: Record<string, number>) => {
-    let falciparum = 0; let vivax = 0; let malariae = 0; let ovale = 0;
+  // --- NEW: Accurate multi-species extraction ---
+  const getDetectedSpeciesList = (counts: Record<string, number>) => {
+    const speciesSet = new Set<string>();
     
-    Object.entries(counts).forEach(([key, val]) => {
+    Object.keys(counts).forEach(key => {
       const k = key.toLowerCase();
-      // Count specific species
-      if (k.includes('vivax')) vivax += val;
-      else if (k.includes('malariae')) malariae += val;
-      else if (k.includes('ovale')) ovale += val;
-      // If it explicitly says falciparum OR uses our generic MicroSmart classes
-      else if (k.includes('falciparum') || ['ring', 'trophozoite', 'gametocyte', 'schizont'].includes(k)) falciparum += val;
+      if (k.includes('falciparum')) speciesSet.add('P. Falciparum');
+      if (k.includes('vivax')) speciesSet.add('P. Vivax');
+      if (k.includes('malariae')) speciesSet.add('P. Malariae');
+      if (k.includes('ovale')) speciesSet.add('P. Ovale');
     });
     
-    if (vivax > falciparum && vivax >= malariae && vivax >= ovale) return "P. Vivax";
-    if (malariae > falciparum && malariae >= vivax && malariae >= ovale) return "P. Malariae";
-    if (ovale > falciparum && ovale >= vivax && ovale >= malariae) return "P. Ovale";
-    if (falciparum === 0 && vivax === 0 && malariae === 0 && ovale === 0) return "None Detected";
-    
-    return "P. Falciparum";
+    if (speciesSet.size === 0) return "None Detected";
+    return Array.from(speciesSet).join(", ");
   };
 
-  const detectedSpecies = getDominantSpecies(result.detailed_counts);
+  const detectedSpecies = getDetectedSpeciesList(result.detailed_counts);
 
   return (
     <div className="h-24 bg-slate-900/80 backdrop-blur-md border-b border-cyan-900/30 flex items-center px-6 justify-between shrink-0 z-40 animate-fade-in-up relative overflow-hidden">
@@ -79,16 +73,16 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
           </div>
         </div>
 
-        {/* --- DYNAMIC SPECIES INJECTION --- */}
+        {/* Dynamic Species List */}
         <div className="flex flex-col">
           <div className="text-[10px] text-slate-500 font-bold uppercase mb-1 flex items-center gap-2">
             <Fingerprint size={12} /> Detected Species
           </div>
-          <div className={`text-xl font-bold tracking-wide ${detectedSpecies === 'None Detected' ? 'text-slate-500' : 'text-cyan-400'}`}>
+          <div className={`text-xl font-bold tracking-wide truncate max-w-[250px] ${detectedSpecies === 'None Detected' ? 'text-slate-500' : 'text-cyan-400'}`} title={detectedSpecies}>
             {detectedSpecies}
           </div>
           <div className="text-[10px] text-slate-500">
-            {detectedSpecies !== 'None Detected' ? 'AI Confidence: High' : 'Target not found'}
+            {detectedSpecies !== 'None Detected' ? 'Multi-class Analysis Active' : 'Target not found'}
           </div>
         </div>
 

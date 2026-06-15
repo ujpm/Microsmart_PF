@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Bot, ChevronRight, Microscope } from 'lucide-react';
 import { type VisionResult } from '../hooks/useAnalysis';
 
@@ -24,7 +25,7 @@ export const BrainConsole: React.FC<BrainConsoleProps> = ({
   return (
     <div className={`
       relative bg-slate-900 border-l border-slate-800 flex flex-col h-full transition-all duration-300 ease-in-out
-      ${isCollapsed ? 'w-12' : 'w-80 lg:w-96'}
+      ${isCollapsed ? 'w-12' : 'w-80 lg:w-[450px]'}
     `}>
        {/* Header */}
        <div className="h-10 border-b border-slate-800 flex items-center justify-between px-3 shrink-0 bg-slate-900/50">
@@ -64,19 +65,60 @@ export const BrainConsole: React.FC<BrainConsoleProps> = ({
              </div>
            ) : (
              <div className="space-y-6">
+                
                 {/* Minimal Counts for the side panel */}
                 <div className="grid grid-cols-2 gap-2">
-                   {Object.entries(activeSlideData.detailed_counts).map(([key, val]) => (
-                      <div key={key} className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between">
-                         <span className="text-[10px] text-slate-500 uppercase">{key.slice(0,3)}</span>
-                         <span className="text-sm font-mono text-cyan-400">{val}</span>
-                      </div>
-                   ))}
+                   {Object.entries(activeSlideData.detailed_counts).map(([key, val]) => {
+                      let shortLabel = key.slice(0, 4);
+                      if (key === "RBC" || key === "WBC") shortLabel = key;
+                      else if (key.startsWith("P. ")) {
+                         const parts = key.split(" ");
+                         if (parts.length >= 3) {
+                            shortLabel = `P${parts[1][0]} ${parts[2].slice(0,3)}`; 
+                         }
+                      }
+
+                      return (
+                        <div key={key} className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between items-center" title={key}>
+                           <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider truncate">
+                             {shortLabel}
+                           </span>
+                           <span className="text-sm font-mono text-cyan-400">{val}</span>
+                        </div>
+                      )
+                   })}
                 </div>
                 
-                {/* Report Area */}
-                <div className="prose prose-invert prose-xs">
-                   {report ? <ReactMarkdown>{report}</ReactMarkdown> : <span className="italic opacity-50">Waiting for clinical assessment...</span>}
+                {/* Report Area with Custom Styled Markdown */}
+                <div className="text-sm text-slate-300 leading-relaxed space-y-4">
+                   {report ? (
+                     <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        // --- THE FIX: Sanitize the string before rendering ---
+                        children={report.replace(/</g, '< ').replace(/>/g, '> ')} 
+                        // -----------------------------------------------------
+                        components={{
+                          h1: ({node, ...props}) => <h1 className="text-lg font-bold text-slate-100 mt-6 mb-2" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="text-md font-bold text-cyan-400 mt-5 mb-2 uppercase tracking-wide text-[11px]" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-sm font-bold text-slate-200 mt-4 mb-2" {...props} />,
+                          p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-1 text-slate-300" {...props} />,
+                          li: ({node, ...props}) => <li className="pl-2" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-bold text-cyan-400" {...props} />,
+                          table: ({node, ...props}) => (
+                            <div className="overflow-x-auto my-4 rounded-lg border border-slate-700 shadow-xl bg-slate-950/50">
+                               <table className="w-full text-left border-collapse" {...props} />
+                            </div>
+                          ),
+                          thead: ({node, ...props}) => <thead className="bg-slate-800/80 border-b border-slate-700" {...props} />,
+                          th: ({node, ...props}) => <th className="p-3 text-[10px] uppercase tracking-wider text-cyan-500 font-bold" {...props} />,
+                          td: ({node, ...props}) => <td className="p-3 text-xs text-slate-300 border-b border-slate-800/50" {...props} />,
+                          tr: ({node, ...props}) => <tr className="hover:bg-slate-800/50 transition-colors" {...props} />
+                        }}
+                     />
+                   ) : (
+                     <span className="italic opacity-50">Waiting for clinical assessment...</span>
+                   )}
                 </div>
              </div>
            )}

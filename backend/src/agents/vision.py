@@ -3,8 +3,7 @@ import cv2
 import os
 import base64
 import requests
-import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ultralytics import YOLO
 
 logging.basicConfig(level=logging.INFO)
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 class VisionAgent:
     def __init__(self, local_model_path: str = "models/best.pt"):
-        # 1. Initialize MicroSmart Edge Model
         try:
             logger.info(f"Loading MicroSmart Model from: {local_model_path}")
             self.local_model = YOLO(local_model_path)
@@ -20,23 +18,62 @@ class VisionAgent:
             logger.error(f"Failed to load Local YOLO model: {e}")
             self.local_model = None
 
-        # 2. Initialize Cloud API Credentials
         self.rf_api_key = os.getenv("ROBOFLOW_API_KEY")
-        self.rf_model_id = "malaria_broadinstitute_diagmal/6"
+        self.rf_model_id = os.getenv("ROBOFLOW_MODEL_ID", "malaria_broadinstitute_diagmal/6")
         if not self.rf_api_key:
             logger.warning("ROBOFLOW_API_KEY missing from .env")
 
     def analyze_image(self, image_path: str, engine: str = "local") -> Dict[str, Any]:
-        """Routes traffic to the requested engine."""
+        """Routes traffic to the requested engine, with automatic network fallback."""
         if engine == "cloud" and self.rf_api_key:
-            logger.info(f"Running CLOUD ENGINE on: {image_path}")
-            return self._run_cloud(image_path)
+            logger.info(f"Attempting CLOUD ENGINE on: {image_path}")
+            try:
+                return self._run_cloud(image_path)
+            except Exception as e:
+                logger.error(f"Cloud Engine failed ({e}), falling back to EDGE ENGINE.")
+                return self._run_local(image_path)
         else:
             logger.info(f"Running EDGE ENGINE on: {image_path}")
             return self._run_local(image_path)
 
+    # --- SHARED HELPERS (Preventing God Component) ---
+    def _format_label(self, raw_name: str) -> str:
+        """Unifies taxonomy across both engines."""
+        display_name = raw_name.replace("p-", "P. ").title()
+        if raw_name.lower() in ["red blood cell", "rbc"]: return "RBC"
+        if raw_name.lower() in ["leukocyte", "wbc"]: return "WBC"
+        return display_name
+
+    def _get_color(self, label: str):
+        """Generates bounding box colors based on standard taxonomy."""
+        lower = label.lower()
+        if "wbc" in lower: return (255, 0, 255)
+        if "rbc" in lower: return (150, 150, 150)
+        if "difficult" in lower: return (0, 165, 255)
+        if "falciparum" in lower: return (0, 255, 255)
+        if "vivax" in lower: return (0, 255, 0)
+        if "malariae" in lower: return (255, 100, 100)
+        if "ovale" in lower: return (0, 100, 255)
+        return (0, 255, 255) # Default parasite
+
+    def _draw_annotations(self, image, boxes_to_draw: List[Dict]) -> str:
+        """Handles OpenCV drawing logic outside of the core ML inference."""
+        annotated_bgr = image.copy()
+        for item in boxes_to_draw:
+            x1, y1, x2, y2 = item["coords"]
+            color = item["color"]
+            label = item["label"]
+            
+            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), color, 3)
+            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+            cv2.rectangle(annotated_bgr, (x1, y1 - h - 12), (x1 + w, y1), color, -1)
+            cv2.putText(annotated_bgr, label, (x1, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+
+        _, buffer = cv2.imencode('.jpg', annotated_bgr)
+        return base64.b64encode(buffer).decode('utf-8')
+
     # ==========================================
-    # ENGINE A: EDGE (MICROSMART 4-CLASS)
+    # ENGINE A: EDGE
     # ==========================================
     def _run_local(self, image_path: str) -> Dict[str, Any]:
         results = self.local_model.predict(image_path, conf=0.25, verbose=False)
@@ -49,57 +86,33 @@ class VisionAgent:
 
         for box in result.boxes:
             class_id = int(box.cls[0])
-            raw_name = self.local_model.names[class_id].lower()
+            raw_name = self.local_model.names[class_id]
             conf = float(box.conf[0])
             
+            display_name = self._format_label(raw_name)
+            color = self._get_color(display_name)
             label_text = ""
-            color = (150, 150, 150)
 
-            if "rbc" in raw_name or "red_blood_cell" in raw_name:
+            if display_name == "RBC":
                 total_rbc += 1
                 counts["RBC"] = counts.get("RBC", 0) + 1
-            elif "leukocyte" in raw_name or "wbc" in raw_name:
+            elif display_name == "WBC":
                 counts["WBC"] = counts.get("WBC", 0) + 1
-                label_text, color = f"WBC {conf:.2f}", (255, 0, 255)
+                label_text = f"WBC {conf:.2f}"
+            elif "Difficult" in display_name:
+                counts["Difficult"] = counts.get("Difficult", 0) + 1
+                label_text = f"Difficult {conf:.2f}"
             else:
                 total_parasites += 1
-                color = (0, 255, 255)
-                stage_code = "Pf?"
-                
-                # Edge specific classes
-                if "ring" in raw_name: 
-                    counts["Ring"] = counts.get("Ring", 0) + 1
-                    stage_code = "PfR"
-                elif "trophozoite" in raw_name: 
-                    counts["Trophozoite"] = counts.get("Trophozoite", 0) + 1
-                    stage_code = "PfT"
-                elif "gametocyte" in raw_name: 
-                    counts["Gametocyte"] = counts.get("Gametocyte", 0) + 1
-                    stage_code = "PfG"
-                elif "schizont" in raw_name: 
-                    counts["Schizont"] = counts.get("Schizont", 0) + 1
-                    stage_code = "PfS"
-                else:
-                    counts["Trophozoite"] = counts.get("Trophozoite", 0) + 1
-                    stage_code = "PfT"
-
-                label_text = f"{stage_code} {conf:.2f}"
+                # ACCURATE LOGGING: No more guessing or forcing to PfT
+                counts[display_name] = counts.get(display_name, 0) + 1
+                label_text = f"{display_name} {conf:.2f}"
 
             if label_text: 
-                boxes_to_draw.append({"coords": box.xyxy[0], "label": label_text, "color": color})
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                boxes_to_draw.append({"coords": [x1, y1, x2, y2], "label": label_text, "color": color})
 
-        annotated_bgr = result.orig_img.copy()
-        for item in boxes_to_draw:
-            x1, y1, x2, y2 = map(int, item["coords"])
-            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), item["color"], 3)
-            font_scale = 0.8
-            thickness = 2
-            (w, h), _ = cv2.getTextSize(item["label"], cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
-            cv2.rectangle(annotated_bgr, (x1, y1 - h - 12), (x1 + w, y1), item["color"], -1)
-            cv2.putText(annotated_bgr, item["label"], (x1, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), thickness)
-
-        _, buffer = cv2.imencode('.jpg', annotated_bgr)
-        annotated_b64 = base64.b64encode(buffer).decode('utf-8')
+        annotated_b64 = self._draw_annotations(result.orig_img, boxes_to_draw)
         parasitemia_str = f"{((total_parasites / (total_rbc + total_parasites)) * 100):.2f}%" if total_rbc > 0 else "N/A"
 
         return {
@@ -112,22 +125,19 @@ class VisionAgent:
         }
 
     # ==========================================
-    # ENGINE B: CLOUD (12-CLASS DYNAMIC)
+    # ENGINE B: CLOUD 
     # ==========================================
     def _run_cloud(self, image_path: str) -> Dict[str, Any]:
         orig_img = cv2.imread(image_path)
-        
         with open(image_path, "rb") as image_file:
             img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
         
         url = f"https://detect.roboflow.com/{self.rf_model_id}"
         response = requests.post(
-            url, 
-            params={"api_key": self.rf_api_key}, 
-            data=img_b64, 
+            url, params={"api_key": self.rf_api_key}, data=img_b64, 
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
-        
+        response.raise_for_status() # Triggers fallback if API fails
         result = response.json()
         
         counts = {}
@@ -140,62 +150,38 @@ class VisionAgent:
                 raw_name = p["class"]
                 conf = p["confidence"]
                 
-                # Convert Center X/Y to X1/Y1
                 x_c, y_c, w, h = p["x"], p["y"], p["width"], p["height"]
                 x1, y1, x2, y2 = int(x_c - w/2), int(y_c - h/2), int(x_c + w/2), int(y_c + h/2)
                 
-                # Clean up the name for the UI and Brain Agent
-                display_name = raw_name.replace("p-", "P. ").title()
-                if raw_name.lower() in ["red blood cell", "rbc"]: display_name = "RBC"
-                if raw_name.lower() in ["leukocyte", "wbc"]: display_name = "WBC"
-                
+                display_name = self._format_label(raw_name)
+                color = self._get_color(display_name)
                 label_text = ""
-                color = (150, 150, 150)
-                raw_lower = raw_name.lower()
 
-                if "rbc" in display_name.lower():
+                if display_name == "RBC":
                     total_rbc += 1
                     counts["RBC"] = counts.get("RBC", 0) + 1
-                elif "wbc" in display_name.lower():
+                elif display_name == "WBC":
                     counts["WBC"] = counts.get("WBC", 0) + 1
-                    label_text, color = f"WBC {conf:.2f}", (255, 0, 255)
-                elif "difficult" in raw_lower:
+                    label_text = f"WBC {conf:.2f}"
+                elif "Difficult" in display_name:
                     counts["Difficult"] = counts.get("Difficult", 0) + 1
-                    label_text, color = f"Difficult {conf:.2f}", (0, 165, 255)
+                    label_text = f"Difficult {conf:.2f}"
                 else:
                     total_parasites += 1
                     counts[display_name] = counts.get(display_name, 0) + 1
-                    
-                    # Species Color Coding
-                    if "falciparum" in raw_lower: color = (0, 255, 255) # Yellow
-                    elif "vivax" in raw_lower: color = (0, 255, 0)      # Green
-                    elif "malariae" in raw_lower: color = (255, 100, 100) # Blue
-                    elif "ovale" in raw_lower: color = (0, 100, 255)    # Orange
-                    else: color = (0, 255, 255)
-                    
-                    # For Cloud, we show the full species name on the bounding box
                     label_text = f"{display_name} {conf:.2f}"
 
                 if label_text: 
                     boxes_to_draw.append({"coords": [x1, y1, x2, y2], "label": label_text, "color": color})
 
-        annotated_bgr = orig_img.copy()
-        for item in boxes_to_draw:
-            x1, y1, x2, y2 = item["coords"]
-            cv2.rectangle(annotated_bgr, (x1, y1), (x2, y2), item["color"], 3)
-            (w, h), _ = cv2.getTextSize(item["label"], cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-            cv2.rectangle(annotated_bgr, (x1, y1 - h - 12), (x1 + w, y1), item["color"], -1)
-            cv2.putText(annotated_bgr, item["label"], (x1, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
-
-        _, buffer = cv2.imencode('.jpg', annotated_bgr)
-        annotated_b64 = base64.b64encode(buffer).decode('utf-8')
+        annotated_b64 = self._draw_annotations(orig_img, boxes_to_draw)
         parasitemia_str = f"{((total_parasites / (total_rbc + total_parasites)) * 100):.2f}%" if total_rbc > 0 else "N/A"
 
         return {
             "summary_headline": f"{total_parasites} Parasites Detected", 
             "total_parasites": total_parasites,
             "parasitemia_calculation": {"status": "Success" if parasitemia_str != "N/A" else "Insufficient RBCs", "value": parasitemia_str, "rbc_count": total_rbc},
-            "detailed_counts": counts, # Sends exactly what was found!
+            "detailed_counts": counts,
             "annotated_image": annotated_b64,
             "image_metadata": {"height": orig_img.shape[0], "width": orig_img.shape[1]}
         }
