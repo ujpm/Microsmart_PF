@@ -4,7 +4,7 @@ import { Filmstrip } from './Filmstrip';
 import { SmartViewer } from './SmartViewer';
 import { BrainConsole } from './BrainConsole';
 import { SessionHUD } from './SessionHUD';
-import { UploadZone } from './UploadZone'; // Import UploadZone
+import { UploadZone } from './UploadZone';
 import type { SessionItem } from '../hooks/useAnalysis'; 
 
 interface WorkbenchLayoutProps {
@@ -15,8 +15,9 @@ interface WorkbenchLayoutProps {
   isProcessing: boolean;
   progressMsg: string;
   onExit: () => void;
-  onAddFiles: (files: File[]) => void;   // New Prop
-  onDeleteSlide: (id: string) => void;   // New Prop
+  // UPDATED: Now expects the engine choice from the UploadZone
+  onAddFiles: (files: File[], engineChoice: 'local' | 'cloud') => void;   
+  onDeleteSlide: (id: string) => void;   
 }
 
 export const WorkbenchLayout: React.FC<WorkbenchLayoutProps> = ({
@@ -76,15 +77,17 @@ export const WorkbenchLayout: React.FC<WorkbenchLayoutProps> = ({
           onSelect={onSelect} 
           isCollapsed={!leftOpen}
           onToggle={() => setLeftOpen(!leftOpen)}
-          onAddFiles={onAddFiles}
+          // Defaulting to local if a user uses a separate "Add File" button inside the filmstrip later
+          onAddFiles={(files) => onAddFiles(files, 'local')}
           onDeleteSlide={onDeleteSlide}
         />
         
-{/* CENTER STAGE */}
+        {/* CENTER STAGE */}
         {isEmptySession ? (
            <div className="flex-1 flex flex-col items-center justify-center bg-slate-950 relative">
               <UploadZone 
-               onFileSelect={(files) => onAddFiles(files)} 
+               // UPDATED: Passes both the selected files AND the engine toggle choice up to the hook
+               onFileSelect={(files, engine) => onAddFiles(files, engine)} 
                loading={isProcessing} 
               />
            </div>

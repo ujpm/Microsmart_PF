@@ -22,9 +22,8 @@ export const useAnalysis = () => {
   const [progressMsg, setProgressMsg] = useState("");
 
   const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const API_URL = RAW_API_URL.replace(/\/$/, ""); // strips trailing slash
+  const API_URL = RAW_API_URL.replace(/\/$/, "");
 
-  // Update 1: Dynamic Calculation (Safe for both models)
   const calculateAggregate = (items: SessionItem[]) => {
     let totalP = 0; let totalRBC = 0;
     const counts: Record<string, number> = {};
@@ -41,7 +40,7 @@ export const useAnalysis = () => {
       }
     });
 
-    // Safeguard to prevent UI errors if it looks for MicroSmart's hardcoded classes
+    // Safeguard for UI
     if (!('Ring' in counts)) counts['Ring'] = 0;
     if (!('Trophozoite' in counts)) counts['Trophozoite'] = 0;
     if (!('Gametocyte' in counts)) counts['Gametocyte'] = 0;
@@ -52,22 +51,7 @@ export const useAnalysis = () => {
     return { totalP, pct, counts };
   };
 
-  // Update 2: Pass engine into the runner
-  const addFiles = (newFiles: File[], engineChoice: 'local' | 'cloud' = 'local') => {
-    const newItems: SessionItem[] = newFiles.map((f, idx) => ({
-      id: `slide-${Date.now()}-${idx}`,
-      status: 'pending', 
-      originalFile: f, 
-      result: null
-    }));
-    
-    const nextSession = [...session, ...newItems];
-    setSession(nextSession);
-    runBatchAnalysis(nextSession, engineChoice); 
-  };
-
-  // Update 3: Append engine to the API Fetch
-  const runBatchAnalysis = async (currentSession: SessionItem[], engine: string) => {
+  const runBatchAnalysis = async (currentSession: SessionItem[], engine: 'local' | 'cloud') => {
     setIsProcessing(true);
     setGlobalReport(null);
     const updatedSession = [...currentSession];
@@ -83,7 +67,6 @@ export const useAnalysis = () => {
         const formData = new FormData();
         formData.append("file", updatedSession[i].originalFile);
         
-        // Appends the engine exactly how main.py expects it
         const res = await fetch(`${API_URL}/analyze?mode=vision_only&engine=${engine}`, { 
             method: "POST", 
             body: formData 
@@ -100,7 +83,6 @@ export const useAnalysis = () => {
       setSession([...updatedSession]);
     }
 
-    // 2. Generate Final Report (if there are processed slides)
     const validSlides = updatedSession.filter(s => s.status === 'done');
     if (validSlides.length > 0) {
         setProgressMsg("Generating Clinical Report...");
@@ -128,10 +110,9 @@ export const useAnalysis = () => {
     setProgressMsg("");
   };
 
-
-  const addFiles = (newFiles: File[]) => {
+  const addFiles = (newFiles: File[], engineChoice: 'local' | 'cloud' = 'local') => {
     const newItems: SessionItem[] = newFiles.map((f, idx) => ({
-      id: `slide-${Date.now()}-${idx}`, // Unique ID
+      id: `slide-${Date.now()}-${idx}`,
       status: 'pending', 
       originalFile: f, 
       result: null
@@ -139,17 +120,16 @@ export const useAnalysis = () => {
     
     const nextSession = [...session, ...newItems];
     setSession(nextSession);
-    runBatchAnalysis(nextSession);
+    runBatchAnalysis(nextSession, engineChoice); 
   };
 
-  const removeSlide = (id: string) => {
+  // We default engineChoice to 'local' for deletions to just trigger the Brain recalculation
+  const removeSlide = (id: string, engineChoice: 'local' | 'cloud' = 'local') => {
     const nextSession = session.filter(s => s.id !== id);
     setSession(nextSession);
     
-    // Only re-run the Brain analysis if there are still slides left
     if (nextSession.length > 0) {
-        // We trick it into running just the Brain report by passing a session with no 'pending' items
-        runBatchAnalysis(nextSession); 
+        runBatchAnalysis(nextSession, engineChoice); 
     } else {
         setGlobalReport(null);
     }

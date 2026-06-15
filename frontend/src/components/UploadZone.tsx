@@ -17,7 +17,6 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onFileSelect, loading })
           Initialize Session
         </h2>
         
-        {/* ENGINE TOGGLE */}
         <div className="flex items-center bg-slate-950 rounded-lg p-1 border border-slate-800">
            <button 
              onClick={() => setEngine('local')}

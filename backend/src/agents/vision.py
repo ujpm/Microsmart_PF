@@ -2,10 +2,10 @@ import logging
 import cv2
 import os
 import base64
+import requests
 import numpy as np
 from typing import Dict, Any
 from ultralytics import YOLO
-from inference_sdk import InferenceHTTPClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,19 +20,15 @@ class VisionAgent:
             logger.error(f"Failed to load Local YOLO model: {e}")
             self.local_model = None
 
-        # 2. Initialize Roboflow Cloud Model
-        rf_api_key = os.getenv("ROBOFLOW_API_KEY")
-        self.rf_client = None
-        if rf_api_key:
-            self.rf_client = InferenceHTTPClient(
-                api_url="https://serverless.roboflow.com",
-                api_key=rf_api_key
-            )
-            self.rf_model_id = "malaria_broadinstitute_diagmal/6"
+        # 2. Initialize Roboflow API Credentials (NO SDK NEEDED!)
+        self.rf_api_key = os.getenv("ROBOFLOW_API_KEY")
+        self.rf_model_id = "malaria_broadinstitute_diagmal/6"
+        if not self.rf_api_key:
+            logger.warning("ROBOFLOW_API_KEY missing from .env")
 
     def analyze_image(self, image_path: str, engine: str = "local") -> Dict[str, Any]:
         """Routes traffic to ensure strict separation of logic."""
-        if engine == "cloud" and self.rf_client:
+        if engine == "cloud" and self.rf_api_key:
             logger.info(f"Running ROBOFLOW ENGINE on: {image_path}")
             return self._run_cloud(image_path)
         else:
@@ -40,7 +36,7 @@ class VisionAgent:
             return self._run_local(image_path)
 
     # ==========================================
-    # ENGINE A: MICROSMART (EXACT CURRENT LOGIC)
+    # ENGINE A: MICROSMART
     # ==========================================
     def _run_local(self, image_path: str) -> Dict[str, Any]:
         results = self.local_model.predict(image_path, conf=0.25, verbose=False)
@@ -127,11 +123,24 @@ class VisionAgent:
         }
 
     # ==========================================
-    # ENGINE B: ROBOFLOW CLOUD (DYNAMIC LOGIC)
+    # ENGINE B: ROBOFLOW CLOUD (HTTP RAW REQUEST)
     # ==========================================
     def _run_cloud(self, image_path: str) -> Dict[str, Any]:
-        result = self.rf_client.infer(image_path, model_id=self.rf_model_id)
         orig_img = cv2.imread(image_path)
+        
+        # 1. Encode image to Base64
+        _, img_encoded = cv2.imencode('.jpg', orig_img)
+        img_b64 = base64.b64encode(img_encoded).decode("utf-8")
+        
+        # 2. Fire raw HTTP POST to Roboflow
+        url = f"https://detect.roboflow.com/{self.rf_model_id}"
+        response = requests.post(
+            url, 
+            params={"api_key": self.rf_api_key}, 
+            data=img_b64, 
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        result = response.json()
         
         counts = {}
         total_parasites = 0
