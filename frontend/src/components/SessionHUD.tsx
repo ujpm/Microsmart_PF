@@ -10,17 +10,37 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
   if (!activeSlide || !activeSlide.result) return null;
 
   const { result } = activeSlide;
-  // Parse parasitemia value (remove % to check threshold)
   const pctStr = result.parasitemia_calculation.value;
   const pctVal = parseFloat(pctStr);
-  
-  // Logic: >2% is Severe Malaria (Rwandan Protocol)
   const isHighRisk = !isNaN(pctVal) && pctVal > 2.0;
+
+  // --- NEW DYNAMIC LOGIC: Determine Dominant Species ---
+  const getDominantSpecies = (counts: Record<string, number>) => {
+    let falciparum = 0; let vivax = 0; let malariae = 0; let ovale = 0;
+    
+    Object.entries(counts).forEach(([key, val]) => {
+      const k = key.toLowerCase();
+      // Count specific species
+      if (k.includes('vivax')) vivax += val;
+      else if (k.includes('malariae')) malariae += val;
+      else if (k.includes('ovale')) ovale += val;
+      // If it explicitly says falciparum OR uses our generic MicroSmart classes
+      else if (k.includes('falciparum') || ['ring', 'trophozoite', 'gametocyte', 'schizont'].includes(k)) falciparum += val;
+    });
+    
+    if (vivax > falciparum && vivax >= malariae && vivax >= ovale) return "P. Vivax";
+    if (malariae > falciparum && malariae >= vivax && malariae >= ovale) return "P. Malariae";
+    if (ovale > falciparum && ovale >= vivax && ovale >= malariae) return "P. Ovale";
+    if (falciparum === 0 && vivax === 0 && malariae === 0 && ovale === 0) return "None Detected";
+    
+    return "P. Falciparum";
+  };
+
+  const detectedSpecies = getDominantSpecies(result.detailed_counts);
 
   return (
     <div className="h-24 bg-slate-900/80 backdrop-blur-md border-b border-cyan-900/30 flex items-center px-6 justify-between shrink-0 z-40 animate-fade-in-up relative overflow-hidden">
       
-      {/* Background Glow for High Risk */}
       {isHighRisk && (
         <div className="absolute inset-0 bg-danger-glow opacity-10 animate-pulse-slow pointer-events-none" />
       )}
@@ -29,9 +49,7 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
       <div className="flex items-center gap-5 border-r border-slate-700/50 pr-8 relative z-10">
         <div className={`
           p-4 rounded-2xl shadow-lg border border-opacity-20
-          ${isHighRisk 
-            ? 'bg-red-500/10 border-red-500 text-red-500' 
-            : 'bg-cyan-500/10 border-cyan-500 text-cyan-400'}
+          ${isHighRisk ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-cyan-500/10 border-cyan-500 text-cyan-400'}
         `}>
           <Activity size={32} strokeWidth={2.5} />
         </div>
@@ -50,10 +68,8 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
         </div>
       </div>
 
-      {/* 2. Secondary Insights (The "Quick Look") */}
+      {/* 2. Secondary Insights */}
       <div className="flex-1 flex items-center justify-start gap-16 pl-10 relative z-10">
-        
-        {/* Total Count */}
         <div className="flex flex-col">
           <div className="text-[10px] text-slate-500 font-bold uppercase mb-1 flex items-center gap-2">
             <BarChart3 size={12} /> Total Load
@@ -63,18 +79,19 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
           </div>
         </div>
 
-        {/* Species Detection */}
+        {/* --- DYNAMIC SPECIES INJECTION --- */}
         <div className="flex flex-col">
           <div className="text-[10px] text-slate-500 font-bold uppercase mb-1 flex items-center gap-2">
             <Fingerprint size={12} /> Detected Species
           </div>
-          <div className="text-xl font-bold text-cyan-400 tracking-wide">
-            P. falciparum
+          <div className={`text-xl font-bold tracking-wide ${detectedSpecies === 'None Detected' ? 'text-slate-500' : 'text-cyan-400'}`}>
+            {detectedSpecies}
           </div>
-          <div className="text-[10px] text-slate-500">Likelihood: High (Region: RW)</div>
+          <div className="text-[10px] text-slate-500">
+            {detectedSpecies !== 'None Detected' ? 'AI Confidence: High' : 'Target not found'}
+          </div>
         </div>
 
-        {/* Quality/Confidence */}
         <div className="flex flex-col w-32">
            <div className="text-[10px] text-slate-500 font-bold uppercase mb-1">Scan Quality</div>
            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">

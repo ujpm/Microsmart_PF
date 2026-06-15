@@ -22,10 +22,15 @@ export const useAnalysis = () => {
   const [progressMsg, setProgressMsg] = useState("");
 
   const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const API_URL = RAW_API_URL.replace(/\/$/, "");
+  const API_URL = RAW_API_URL.replace(/\/$/, ""); 
 
+  // ==========================================
+  // DYNAMIC UNIVERSAL AGGREGATOR
+  // ==========================================
   const calculateAggregate = (items: SessionItem[]) => {
     let totalP = 0; let totalRBC = 0;
+    
+    // Starts completely empty, no hardcoded classes
     const counts: Record<string, number> = {};
 
     items.forEach(item => {
@@ -33,18 +38,13 @@ export const useAnalysis = () => {
         totalP += item.result.total_parasites;
         totalRBC += item.result.parasitemia_calculation.rbc_count;
         
+        // Dynamically tally any class the backend sends
         Object.entries(item.result.detailed_counts).forEach(([key, val]) => {
           if (counts[key] === undefined) counts[key] = 0;
           counts[key] += val;
         });
       }
     });
-
-    // Safeguard for UI
-    if (!('Ring' in counts)) counts['Ring'] = 0;
-    if (!('Trophozoite' in counts)) counts['Trophozoite'] = 0;
-    if (!('Gametocyte' in counts)) counts['Gametocyte'] = 0;
-    if (!('Schizont' in counts)) counts['Schizont'] = 0;
 
     let pct = "N/A";
     if (totalRBC > 0) pct = ((totalP / (totalRBC + totalP)) * 100).toFixed(2) + "%";
@@ -67,6 +67,7 @@ export const useAnalysis = () => {
         const formData = new FormData();
         formData.append("file", updatedSession[i].originalFile);
         
+        // Appends the engine string to the endpoint
         const res = await fetch(`${API_URL}/analyze?mode=vision_only&engine=${engine}`, { 
             method: "POST", 
             body: formData 
@@ -123,7 +124,6 @@ export const useAnalysis = () => {
     runBatchAnalysis(nextSession, engineChoice); 
   };
 
-  // We default engineChoice to 'local' for deletions to just trigger the Brain recalculation
   const removeSlide = (id: string, engineChoice: 'local' | 'cloud' = 'local') => {
     const nextSession = session.filter(s => s.id !== id);
     setSession(nextSession);
