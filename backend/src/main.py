@@ -56,7 +56,7 @@ def read_root():
     return {"status": "Online"}
 
 @app.post("/analyze")
-async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
+async def analyze_sample(file: UploadFile = File(...), mode: str = "full", engine: str = "local"):
     if not vision_bot:
         raise HTTPException(status_code=503, detail="Vision Agent down.")
 
@@ -65,7 +65,8 @@ async def analyze_sample(file: UploadFile = File(...), mode: str = "full"):
         with open(temp_filename, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        vision_results = vision_bot.analyze_image(temp_filename)
+        # Passes "local" or "cloud" to vision.py
+        vision_results = vision_bot.analyze_image(temp_filename, engine=engine)
 
         if mode == "vision_only":
             return {"analysis": vision_results}

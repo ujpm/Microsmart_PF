@@ -24,34 +24,54 @@ export const useAnalysis = () => {
   const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
   const API_URL = RAW_API_URL.replace(/\/$/, ""); // strips trailing slash
 
-  // Helper: Calculate Aggregate Data
+  // Update 1: Dynamic Calculation (Safe for both models)
   const calculateAggregate = (items: SessionItem[]) => {
     let totalP = 0; let totalRBC = 0;
-    const counts: Record<string, number> = { Ring: 0, Trophozoite: 0, Gametocyte: 0, Schizont: 0 };
+    const counts: Record<string, number> = {};
 
     items.forEach(item => {
       if (item.result) {
         totalP += item.result.total_parasites;
         totalRBC += item.result.parasitemia_calculation.rbc_count;
+        
         Object.entries(item.result.detailed_counts).forEach(([key, val]) => {
-          if (counts[key] !== undefined) counts[key] += val;
+          if (counts[key] === undefined) counts[key] = 0;
+          counts[key] += val;
         });
       }
     });
+
+    // Safeguard to prevent UI errors if it looks for MicroSmart's hardcoded classes
+    if (!('Ring' in counts)) counts['Ring'] = 0;
+    if (!('Trophozoite' in counts)) counts['Trophozoite'] = 0;
+    if (!('Gametocyte' in counts)) counts['Gametocyte'] = 0;
+    if (!('Schizont' in counts)) counts['Schizont'] = 0;
 
     let pct = "N/A";
     if (totalRBC > 0) pct = ((totalP / (totalRBC + totalP)) * 100).toFixed(2) + "%";
     return { totalP, pct, counts };
   };
 
-  // The Core Batch Engine
-  const runBatchAnalysis = async (currentSession: SessionItem[]) => {
+  // Update 2: Pass engine into the runner
+  const addFiles = (newFiles: File[], engineChoice: 'local' | 'cloud' = 'local') => {
+    const newItems: SessionItem[] = newFiles.map((f, idx) => ({
+      id: `slide-${Date.now()}-${idx}`,
+      status: 'pending', 
+      originalFile: f, 
+      result: null
+    }));
+    
+    const nextSession = [...session, ...newItems];
+    setSession(nextSession);
+    runBatchAnalysis(nextSession, engineChoice); 
+  };
+
+  // Update 3: Append engine to the API Fetch
+  const runBatchAnalysis = async (currentSession: SessionItem[], engine: string) => {
     setIsProcessing(true);
     setGlobalReport(null);
-
     const updatedSession = [...currentSession];
 
-    // 1. Process only 'pending' items
     for (let i = 0; i < updatedSession.length; i++) {
       if (updatedSession[i].status !== 'pending') continue;
 
@@ -63,7 +83,8 @@ export const useAnalysis = () => {
         const formData = new FormData();
         formData.append("file", updatedSession[i].originalFile);
         
-        const res = await fetch(`${API_URL}/analyze?mode=vision_only`, { 
+        // Appends the engine exactly how main.py expects it
+        const res = await fetch(`${API_URL}/analyze?mode=vision_only&engine=${engine}`, { 
             method: "POST", 
             body: formData 
         });
