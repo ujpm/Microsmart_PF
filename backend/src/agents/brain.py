@@ -1,81 +1,78 @@
-import os
+import json
 import logging
-from typing import Dict
-try:
-    from cerebras.cloud.sdk import Cerebras
-except ImportError:
-    Cerebras = None
-    logging.warning("cerebras_cloud_sdk not found. Please install it.")
+from cerebras.cloud.sdk import Cerebras
+from src.config import CEREBRAS_API_KEY, DISEASE_REGISTRY
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class BrainAgent:
     def __init__(self):
-        self.api_key = os.environ.get("CEREBRAS_API_KEY")
-        if not self.api_key:
-            logger.error("CEREBRAS_API_KEY environment variable is not set.")
-            raise EnvironmentError("Missing Cerebras API Key")
-        
-        if Cerebras is None:
-            raise ImportError("Cerebras SDK is not installed.")
-            
-        self.client = Cerebras(api_key=self.api_key)
-        # Verify this model string matches Cerebras's current Llama 3.3 endpoint
-        self.model_id = "gpt-oss-120b" 
-
-    def generate_report(self, vision_data: Dict) -> str:
-        # 1. Dynamically extract the exact counts sent to the frontend
-        counts = vision_data.get('detailed_counts', {})
-        total_parasites = vision_data.get('total_parasites', 0)
-        
-        parasitemia = "N/A"
-        if 'parasitemia_calculation' in vision_data:
-            parasitemia = vision_data['parasitemia_calculation'].get('value', 'N/A')
-
-        # Format the dynamic counts into a readable list for the LLM
-        counts_list = "\n".join([f"- {k}: {v}" for k, v in counts.items()])
-
-        # 2. Objective, Data-Driven System Prompt
-        system_prompt = (
-            "You are MicroSmart, an expert autonomous diagnostic agent for Malaria at a Rwandan District Hospital. "
-            "CRITICAL RULES: "
-            "1. RELY STRICTLY ON THE PROVIDED DATA. Do not assume P. falciparum if the data shows P. vivax, P. ovale, or P. malariae. "
-            "2. The vision model has high confidence for P. falciparum, but lower confidence for other species. If non-falciparum species are detected, note this uncertainty and advise manual confirmation. "
-            "3. Format your response STRICTLY in Markdown. Use a clean Markdown table to summarize the cell counts and parasitemia. "
-            "4. Provide concise, professional Rwandan National Guidelines treatment recommendations based *only* on the detected species."
-        )
-
-        user_prompt = f"""
-        LABORATORY DATA:
-        - Total Parasites Detected: {total_parasites}
-        - Computed Parasitemia: {parasitemia}
-        
-        CELL BREAKDOWN:
-        {counts_list}
-
-        TASK:
-        1. Create a Markdown table summarizing the Cell Breakdown.
-        2. Final Diagnosis: State the detected species based purely on the data.
-        3. Severity Classification: Write 'Severe' if parasitemia is greater than 2% or neurological signs are present.
-        4. Clinical Recommendation.
-        
-        CRITICAL FORMATTING RULE: Do NOT use the `<` or `>` mathematical symbols in your text (write "less than" or "greater than"). These symbols crash the UI.
         """
+        Initializes the LLM client. 
+        We use a deterministic, low-temperature setup for clinical accuracy.
+        """
+        if not CEREBRAS_API_KEY:
+            logger.warning("CEREBRAS_API_KEY is missing. Clinical reporting will fail.")
+            self.client = None
+        else:
+            self.client = Cerebras(api_key=CEREBRAS_API_KEY)
+            
+        # Using the Llama 3.1 70B model for high-tier clinical reasoning
+        self.model = "gpt-oss-120b" 
+
+    def generate_report(self, vision_data: dict) -> str:
+        """
+        Ingests the JSON output from the Vision Agent, applies the dynamic 
+        clinical prompt based on the sample type, and generates a Markdown report.
+        """
+        if not self.client:
+            return "Error: LLM API key not configured. Cannot generate clinical report."
 
         try:
-            logger.info("Generating Clinical Report via Cerebras...")
+            # 1. Extract the dynamic context injected by the Vision Agent
+            sample_type = vision_data.get("diagnostic_context", "MALARIA").upper()
+            predictions = vision_data.get("predictions", [])
+            
+            # 2. Fetch the strict clinical rules for this specific disease
+            if sample_type not in DISEASE_REGISTRY:
+                logger.warning(f"Unknown sample type '{sample_type}'. Defaulting to MALARIA.")
+                sample_type = "MALARIA"
+                
+            system_prompt = DISEASE_REGISTRY[sample_type]["brain_system_prompt"]
+            
+            # 3. Pre-process the data to save tokens and improve LLM accuracy
+            class_counts = {}
+            for pred in predictions:
+                cls_name = pred.get("class", "Unknown")
+                class_counts[cls_name] = class_counts.get(cls_name, 0) + 1
+            
+            user_content = f"### Vision AI Telemetry ({sample_type})\n"
+            user_content += f"Total objects detected: {len(predictions)}\n\n"
+            
+            user_content += "Aggregated Counts:\n"
+            for cls_name, count in class_counts.items():
+                user_content += f"- {cls_name}: {count}\n"
+            
+            # We pass the raw bounding boxes in case the LLM needs to assess spatial density
+            user_content += "\nRaw Bounding Box Data:\n"
+            user_content += json.dumps(predictions, indent=2)
+            
+            user_content += "\n\nTask: Generate a professional, structured clinical report based on these findings."
+
+            # 4. Execute the inference
+            logger.info(f"Generating clinical report for {sample_type} via Cerebras...")
             response = self.client.chat.completions.create(
-                model=self.model_id,
+                model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": user_content}
                 ],
-                temperature=0.1, 
-                max_tokens=1500 # Increased from 800 to prevent API token cutoffs
+                temperature=0.1, # Extremely low temperature to prevent medical hallucinations
+                max_completion_tokens=1024
             )
+            
             return response.choices[0].message.content
-        
+
         except Exception as e:
-            logger.error(f"Brain Agent Failure: {e}")
-            return f"Error: Clinical reasoning engine offline. Details: {str(e)}"
+            logger.error(f"Brain Agent inference failed: {e}")
+            return f"Error generating clinical report: {str(e)}"
