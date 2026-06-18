@@ -11,6 +11,7 @@ python-multipart        # To handle image uploads
 numpy
 pillow                  # Image processing
 lm-raindrop
+asyncpg                 # PostgreSQL async driver for SQLAlchemy
 
 # The Interface
 streamlit
