@@ -10,9 +10,26 @@ python-multipart        # To handle image uploads
 # Data Handling
 numpy
 pillow                  # Image processing
-lm-raindrop
 asyncpg                 # PostgreSQL async driver for SQLAlchemy
+sqlalchemy              # ORM and async database support
+
+# Vision & ML Models
+roboflow                # Roboflow API for model inference
+
+# PDF Generation
+markdown                # Markdown to HTML conversion
+weasyprint              # PDF rendering from HTML
 
 # The Interface
 streamlit
 python-dotenv
+# Security & Auth
+PyJWT
+
+# Database
+SQLAlchemy
+
+# PDF Report Generation
+weasyprint
+Jinja2
+Markdown

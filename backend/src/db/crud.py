@@ -27,6 +27,15 @@ async def get_or_create_default_org_and_user(db: AsyncSession):
     await db.refresh(user)
     return user
 
+async def get_user_by_auth_id(db: AsyncSession, user_id: str):
+    """Fetches a user directly using their Supabase Auth UUID."""
+    try:
+        user_uuid = uuid.UUID(user_id)
+        result = await db.execute(select(User).where(User.id == user_uuid))
+        return result.scalars().first()
+    except ValueError:
+        return None
+
 async def create_session(db: AsyncSession, user_id: uuid.UUID, facility_id: uuid.UUID, sample_type: SampleTypeEnum) -> DiagnosticSession:
     db_session = DiagnosticSession(user_id=user_id, facility_id=facility_id, sample_type=sample_type, status=SessionStatusEnum.PENDING)
     db.add(db_session)
@@ -40,8 +49,12 @@ async def save_inference_result(db: AsyncSession, session_id: uuid.UUID, image_u
     await db.execute(update(DiagnosticSession).where(DiagnosticSession.id == session_id).values(status=SessionStatusEnum.COMPLETED))
     await db.commit()
 
+async def update_session_status(db: AsyncSession, session_id: uuid.UUID, status: SessionStatusEnum):
+    """Updates session status gracefully on failure."""
+    await db.execute(update(DiagnosticSession).where(DiagnosticSession.id == session_id).values(status=status))
+    await db.commit()
+
 async def get_session_with_results(db: AsyncSession, session_id: uuid.UUID):
-    """Fetches a session and its attached ML inferences (if completed)."""
     result = await db.execute(
         select(DiagnosticSession)
         .options(selectinload(DiagnosticSession.inferences))
