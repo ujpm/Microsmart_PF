@@ -1,0 +1,402 @@
+{
+  "slide_1.jpg": {
+    "original": "DSCN2707_JPG_jpg.rf.0b28138a3146cdc365df082efa249699.jpg",
+    "truth": "Positive"
+  },
+  "slide_2.jpg": {
+    "original": "DSCN2707_JPG_jpg.rf.14f1c9e198823c427836ebea3e9ab947.jpg",
+    "truth": "Positive"
+  },
+  "slide_3.jpg": {
+    "original": "DSCN2707_JPG_jpg.rf.bcf496fa7b78c14226448a5d3963b0a2.jpg",
+    "truth": "Positive"
+  },
+  "slide_4.jpg": {
+    "original": "DSCN2727_JPG_jpg.rf.40691a03a67adf36b9212298a98ad4af.jpg",
+    "truth": "Positive"
+  },
+  "slide_5.jpg": {
+    "original": "DSCN2727_JPG_jpg.rf.89741e568ac81d9ecefcb7fcfcb9e407.jpg",
+    "truth": "Positive"
+  },
+  "slide_6.jpg": {
+    "original": "DSCN2729_JPG_jpg.rf.4d28c0376bac966e3f61e62823dac2e9.jpg",
+    "truth": "Positive"
+  },
+  "slide_7.jpg": {
+    "original": "DSCN2735_JPG_jpg.rf.275a1c9e4db6a3f28024c7c25645d24d.jpg",
+    "truth": "Positive"
+  },
+  "slide_8.jpg": {
+    "original": "DSCN2744_JPG_jpg.rf.9dfefcdc41d112d578c55d995e81fb08.jpg",
+    "truth": "Positive"
+  },
+  "slide_9.jpg": {
+    "original": "DSCN2744_JPG_jpg.rf.f28530b45e922f05d3fb4b61b3a90227.jpg",
+    "truth": "Positive"
+  },
+  "slide_10.jpg": {
+    "original": "DSCN2744_JPG_jpg.rf.fe9fd7939fa87e36cf6e064622a9b905.jpg",
+    "truth": "Positive"
+  },
+  "slide_11.jpg": {
+    "original": "DSCN2767_JPG_jpg.rf.85e9bb23334dd173b00950b56f5a3757.jpg",
+    "truth": "Positive"
+  },
+  "slide_12.jpg": {
+    "original": "DSCN2767_JPG_jpg.rf.8a99d9b3021a86146782b20b7502a048.jpg",
+    "truth": "Positive"
+  },
+  "slide_13.jpg": {
+    "original": "DSCN2767_JPG_jpg.rf.a3b5cac9b740f4e0dc6bc7c06b3e5f66.jpg",
+    "truth": "Positive"
+  },
+  "slide_14.jpg": {
+    "original": "DSCN2783_JPG_jpg.rf.956efec8f33fc31ef02a09fbd3717b09.jpg",
+    "truth": "Positive"
+  },
+  "slide_15.jpg": {
+    "original": "DSCN2783_JPG_jpg.rf.9fa87aa85215264acb19b9b95a38439b.jpg",
+    "truth": "Positive"
+  },
+  "slide_16.jpg": {
+    "original": "DSCN2783_JPG_jpg.rf.c222000fbff48608c5c341f888ef0e93.jpg",
+    "truth": "Positive"
+  },
+  "slide_17.jpg": {
+    "original": "DSCN2794_JPG_jpg.rf.0fa5c69f0d37c54c1f88add380c7f569.jpg",
+    "truth": "Positive"
+  },
+  "slide_18.jpg": {
+    "original": "DSCN2818_JPG_jpg.rf.204e6ebf6c5655023eca5ceab4a16cab.jpg",
+    "truth": "Positive"
+  },
+  "slide_19.jpg": {
+    "original": "DSCN2822_JPG_jpg.rf.0d9bdc4761092f877ecb1bf8344e3d83.jpg",
+    "truth": "Positive"
+  },
+  "slide_20.jpg": {
+    "original": "DSCN2822_JPG_jpg.rf.6ced7f253ab1ec72b7ee1f38661a1468.jpg",
+    "truth": "Positive"
+  },
+  "slide_21.jpg": {
+    "original": "DSCN2822_JPG_jpg.rf.87b57b698f9173baabb8557ed5ae9dbc.jpg",
+    "truth": "Positive"
+  },
+  "slide_22.jpg": {
+    "original": "DSCN2828_JPG_jpg.rf.2475a92e15ec5e3c359fdc0c405ab3dc.jpg",
+    "truth": "Positive"
+  },
+  "slide_23.jpg": {
+    "original": "DSCN2828_JPG_jpg.rf.579a88d9d5a295a7aba4a39ad5e988c1.jpg",
+    "truth": "Positive"
+  },
+  "slide_24.jpg": {
+    "original": "DSCN2828_JPG_jpg.rf.8222360e691416fac6c9125563a051ac.jpg",
+    "truth": "Positive"
+  },
+  "slide_25.jpg": {
+    "original": "DSCN2837_JPG_jpg.rf.f1d79f46b213ebf0cf161a654a9ad344.jpg",
+    "truth": "Positive"
+  },
+  "slide_26.jpg": {
+    "original": "DSCN2842_JPG_jpg.rf.2923ac4ad3e051918705afae9e6dea29.jpg",
+    "truth": "Positive"
+  },
+  "slide_27.jpg": {
+    "original": "DSCN2842_JPG_jpg.rf.c86a3d5e3febcb2e74d17a2d8f81e9f6.jpg",
+    "truth": "Positive"
+  },
+  "slide_28.jpg": {
+    "original": "DSCN2899_JPG_jpg.rf.6b46abf0b41b44bd23bdffbd18ac9981.jpg",
+    "truth": "Positive"
+  },
+  "slide_29.jpg": {
+    "original": "DSCN2899_JPG_jpg.rf.97bb2b1f57313013f551f2485263e55a.jpg",
+    "truth": "Positive"
+  },
+  "slide_30.jpg": {
+    "original": "DSCN2899_JPG_jpg.rf.9c46c5e69782fb4af0c65cb541055e0c.jpg",
+    "truth": "Positive"
+  },
+  "slide_31.jpg": {
+    "original": "DSCN2907_JPG_jpg.rf.6a6931ce8ef50760ec6d9595600b4be4.jpg",
+    "truth": "Positive"
+  },
+  "slide_32.jpg": {
+    "original": "DSCN2907_JPG_jpg.rf.c4ed6081682730c5020c0c0ebda6736a.jpg",
+    "truth": "Positive"
+  },
+  "slide_33.jpg": {
+    "original": "DSCN2929_JPG_jpg.rf.992fa9c6b029e155bfdf458055924c2d.jpg",
+    "truth": "Positive"
+  },
+  "slide_34.jpg": {
+    "original": "DSCN2929_JPG_jpg.rf.ab06a07c6c9b0c060f822906a1474332.jpg",
+    "truth": "Positive"
+  },
+  "slide_35.jpg": {
+    "original": "DSCN2929_JPG_jpg.rf.c328b881f5390f70241b95d4a8ed71bd.jpg",
+    "truth": "Positive"
+  },
+  "slide_36.jpg": {
+    "original": "DSCN2953_JPG_jpg.rf.94f59cd4622ff0c8945193dcab9d7829.jpg",
+    "truth": "Positive"
+  },
+  "slide_37.jpg": {
+    "original": "DSCN2953_JPG_jpg.rf.a20082c63e3ead33eb9812326452dff6.jpg",
+    "truth": "Positive"
+  },
+  "slide_38.jpg": {
+    "original": "DSCN2953_JPG_jpg.rf.ebd422784b34f96a1072912cbcbde6d5.jpg",
+    "truth": "Positive"
+  },
+  "slide_39.jpg": {
+    "original": "DSCN3002_JPG_jpg.rf.3d0a785e9220a2786ded5abcf1f96487.jpg",
+    "truth": "Positive"
+  },
+  "slide_40.jpg": {
+    "original": "DSCN3002_JPG_jpg.rf.9046a4a09376f9b6c099cfef57196f22.jpg",
+    "truth": "Positive"
+  },
+  "slide_41.jpg": {
+    "original": "DSCN3002_JPG_jpg.rf.ee788b2c05bd027e3a49284f43b2e63e.jpg",
+    "truth": "Positive"
+  },
+  "slide_42.jpg": {
+    "original": "DSCN3012_JPG_jpg.rf.01d8b14144e2fe49eb5dbf69324454a7.jpg",
+    "truth": "Positive"
+  },
+  "slide_43.jpg": {
+    "original": "DSCN3012_JPG_jpg.rf.eee3928ec757778d7257fc6859a4bcf0.jpg",
+    "truth": "Positive"
+  },
+  "slide_44.jpg": {
+    "original": "DSCN3016_JPG_jpg.rf.49565f3fed0d0ebb1a226d5ec110df31.jpg",
+    "truth": "Positive"
+  },
+  "slide_45.jpg": {
+    "original": "DSCN3016_JPG_jpg.rf.793d3e4db206515543589199af2def19.jpg",
+    "truth": "Positive"
+  },
+  "slide_46.jpg": {
+    "original": "DSCN3023_JPG_jpg.rf.044a8d60a6dedb5c5faf68ae8af60a47.jpg",
+    "truth": "Positive"
+  },
+  "slide_47.jpg": {
+    "original": "DSCN3023_JPG_jpg.rf.32de68c1cbc72ef359579ff115222538.jpg",
+    "truth": "Positive"
+  },
+  "slide_48.jpg": {
+    "original": "DSCN3023_JPG_jpg.rf.fb31bb140e1a43c4c1e47aa989e5f1f5.jpg",
+    "truth": "Positive"
+  },
+  "slide_49.jpg": {
+    "original": "DSCN3029_JPG_jpg.rf.53ea9bdf16d0bb5cdc1770100066db94.jpg",
+    "truth": "Positive"
+  },
+  "slide_50.jpg": {
+    "original": "DSCN3029_JPG_jpg.rf.79075c631be6e263258f977eb8205549.jpg",
+    "truth": "Positive"
+  },
+  "slide_51.jpg": {
+    "original": "DSCN3029_JPG_jpg.rf.e0f1debe40c0fad4991fc3d4dde32c90.jpg",
+    "truth": "Positive"
+  },
+  "slide_52.jpg": {
+    "original": "DSCN3043_JPG_jpg.rf.4627bcb2fa073fee16f2461617628a8d.jpg",
+    "truth": "Positive"
+  },
+  "slide_53.jpg": {
+    "original": "DSCN3043_JPG_jpg.rf.c3b52bd81eca067e6248de026330c2e1.jpg",
+    "truth": "Positive"
+  },
+  "slide_54.jpg": {
+    "original": "DSCN3043_JPG_jpg.rf.f79931e15463b4b3822fa2bdb3a396ee.jpg",
+    "truth": "Positive"
+  },
+  "slide_55.jpg": {
+    "original": "DSCN3053_JPG_jpg.rf.04e9e405c98ed2ba0480c301deb562e7.jpg",
+    "truth": "Positive"
+  },
+  "slide_56.jpg": {
+    "original": "DSCN3053_JPG_jpg.rf.474ab211e14d29e74bad65f8ed25a341.jpg",
+    "truth": "Positive"
+  },
+  "slide_57.jpg": {
+    "original": "DSCN3053_JPG_jpg.rf.da57ddd7f86dc507b32189d247ebbe77.jpg",
+    "truth": "Positive"
+  },
+  "slide_58.jpg": {
+    "original": "DSCN3059_JPG_jpg.rf.8037640c481c83d3969021772db324e6.jpg",
+    "truth": "Positive"
+  },
+  "slide_59.jpg": {
+    "original": "DSCN3059_JPG_jpg.rf.9a9d80af6a2f991839e3ae887cc51de4.jpg",
+    "truth": "Positive"
+  },
+  "slide_60.jpg": {
+    "original": "DSCN3059_JPG_jpg.rf.b3f8eb63032d4d2ba5381048c4ca4ac3.jpg",
+    "truth": "Positive"
+  },
+  "slide_61.jpg": {
+    "original": "DSCN4045_JPG_jpg.rf.1a8a7fd61e7945e372411551d4477d86.jpg",
+    "truth": "Positive"
+  },
+  "slide_62.jpg": {
+    "original": "DSCN4045_JPG_jpg.rf.6c311f23e024b39bbd3a330294d4cb00.jpg",
+    "truth": "Positive"
+  },
+  "slide_63.jpg": {
+    "original": "DSCN4045_JPG_jpg.rf.a185c3961f3d1217391ac91df9ef8fa3.jpg",
+    "truth": "Positive"
+  },
+  "slide_64.jpg": {
+    "original": "DSCN4050_JPG_jpg.rf.35dfac0f136e7c7b3915444ca1b601de.jpg",
+    "truth": "Positive"
+  },
+  "slide_65.jpg": {
+    "original": "DSCN4141_JPG_jpg.rf.0fb9ec15a29323e9476387565bb49614.jpg",
+    "truth": "Positive"
+  },
+  "slide_66.jpg": {
+    "original": "DSCN4141_JPG_jpg.rf.a1b2e5c5ad83aa9b37119c5d5434c394.jpg",
+    "truth": "Positive"
+  },
+  "slide_67.jpg": {
+    "original": "DSCN4141_JPG_jpg.rf.a35768dfa9c977d68b2f4f3bbd01e868.jpg",
+    "truth": "Positive"
+  },
+  "slide_68.jpg": {
+    "original": "dscn2722_JPG_jpg.rf.573c291e4ce44a92512f9c419edaec21.jpg",
+    "truth": "Positive"
+  },
+  "slide_69.jpg": {
+    "original": "dscn2722_JPG_jpg.rf.6b153f33a755e77e2e0785dfc655af6c.jpg",
+    "truth": "Positive"
+  },
+  "slide_70.jpg": {
+    "original": "dscn2722_JPG_jpg.rf.fea09071d41738d2ad19c3fcabec52f0.jpg",
+    "truth": "Positive"
+  },
+  "slide_71.jpg": {
+    "original": "dscn2972_JPG_jpg.rf.14012edaa401cbd867774d175497a78b.jpg",
+    "truth": "Positive"
+  },
+  "slide_72.jpg": {
+    "original": "dscn2972_JPG_jpg.rf.3adab6e415df05772a79bc6eca6dce4c.jpg",
+    "truth": "Positive"
+  },
+  "slide_73.jpg": {
+    "original": "dscn3039_JPG_jpg.rf.3a3d3befd02db5e0c8405e598ed71d27.jpg",
+    "truth": "Positive"
+  },
+  "slide_74.jpg": {
+    "original": "dscn3039_JPG_jpg.rf.bbfcb963fdcc2d767358cf86100a8ed5.jpg",
+    "truth": "Positive"
+  },
+  "slide_75.jpg": {
+    "original": "dscn3039_JPG_jpg.rf.d75a79019749eb1ed5babd8915551c18.jpg",
+    "truth": "Positive"
+  },
+  "slide_76.jpg": {
+    "original": "negative_7eb95580-693f-41b6-9338-174be1430c23_png.rf.6b18a43736270fc7af663bbf2ceb3ca1.jpg",
+    "truth": "Negative"
+  },
+  "slide_77.jpg": {
+    "original": "negative_91e93160-eb8d-4de0-b6bc-b98ec33d1663_png.rf.34b8f85f5003bb3989481f4b93ca044f.jpg",
+    "truth": "Negative"
+  },
+  "slide_78.jpg": {
+    "original": "negative_94d9fa50-d3e4-4eaf-acfc-92e7f2ed9ea5_png.rf.d2116bd602683453b6da9c417b821cec.jpg",
+    "truth": "Negative"
+  },
+  "slide_79.jpg": {
+    "original": "negative_9d819c89-4ea9-4e75-9b03-da87fa6c6f4d_png.rf.395ee69d5f89cc0456c9bd084bc61407.jpg",
+    "truth": "Negative"
+  },
+  "slide_80.jpg": {
+    "original": "negative_DSCN0260_JPG_jpg.rf.bfc0d542f39e7bd224aa2aca17fb89a4.jpg",
+    "truth": "Negative"
+  },
+  "slide_81.jpg": {
+    "original": "negative_DSCN0525_JPG_jpg.rf.0b9ca8ebcbecd7a52a97cef1162f64d5.jpg",
+    "truth": "Negative"
+  },
+  "slide_82.jpg": {
+    "original": "negative_DSCN0549_JPG_jpg.rf.d2d05c221e51cfcfe77baea844971ad6.jpg",
+    "truth": "Negative"
+  },
+  "slide_83.jpg": {
+    "original": "negative_DSCN1977_JPG_jpg.rf.02109f31d079869debd64c0297610d72.jpg",
+    "truth": "Negative"
+  },
+  "slide_84.jpg": {
+    "original": "negative_DSCN2056_JPG_jpg.rf.d4a095153648737f6e10cc63109ae5d9.jpg",
+    "truth": "Negative"
+  },
+  "slide_85.jpg": {
+    "original": "negative_DSCN4379_JPG_jpg.rf.5f5760e64da6bc08be016ca1892f1445.jpg",
+    "truth": "Negative"
+  },
+  "slide_86.jpg": {
+    "original": "negative_DSCN4799_JPG_jpg.rf.c730b62bddc704721da218237ff31267.jpg",
+    "truth": "Negative"
+  },
+  "slide_87.jpg": {
+    "original": "negative_DSCN4938_JPG_jpg.rf.96d2229f45814af442fe2bf4b2a38674.jpg",
+    "truth": "Negative"
+  },
+  "slide_88.jpg": {
+    "original": "negative_DSCN5160_JPG_jpg.rf.f0e5af0faced52f823ccb4a98efbff5b.jpg",
+    "truth": "Negative"
+  },
+  "slide_89.jpg": {
+    "original": "negative_DSCN5466_JPG_jpg.rf.5564889911e176952e28ed79b0a329b7.jpg",
+    "truth": "Negative"
+  },
+  "slide_90.jpg": {
+    "original": "negative_c6530038-6d4e-49e1-8427-d1d3acc9fa21_png.rf.21da3d10bd022dd7f4bdfae61ee2934c.jpg",
+    "truth": "Negative"
+  },
+  "slide_91.jpg": {
+    "original": "negative_db0a1123-0b35-48d7-8337-3b1ebd6af0cc_png.rf.277abf0056501be162d9144d681ae098.jpg",
+    "truth": "Negative"
+  },
+  "slide_92.jpg": {
+    "original": "negative_de81bf7a-7a56-437f-a068-4d9c3e01134c_png.rf.681de921d6cc270cb2377e7da8f72dae.jpg",
+    "truth": "Negative"
+  },
+  "slide_93.jpg": {
+    "original": "negative_dscn0145_JPG_jpg.rf.7266853459f7ae3c23d49bf4a3b5d838.jpg",
+    "truth": "Negative"
+  },
+  "slide_94.jpg": {
+    "original": "negative_dscn0512_JPG_jpg.rf.c4dcfaadecb4c92954b1276eecd12feb.jpg",
+    "truth": "Negative"
+  },
+  "slide_95.jpg": {
+    "original": "negative_dscn2448_JPG_jpg.rf.efe5ed2790c0cb41da63adf898873654.jpg",
+    "truth": "Negative"
+  },
+  "slide_96.jpg": {
+    "original": "negative_dscn2532_JPG_jpg.rf.6243f876c9e4d6a3196f89c5a575ca7c.jpg",
+    "truth": "Negative"
+  },
+  "slide_97.jpg": {
+    "original": "negative_dscn5067_JPG_jpg.rf.75dc1491880a7e0da26a09cb4e81ef14.jpg",
+    "truth": "Negative"
+  },
+  "slide_98.jpg": {
+    "original": "negative_dscn5627_JPG_jpg.rf.8d3f1580f814d2618713d30bcf5b5195.jpg",
+    "truth": "Negative"
+  },
+  "slide_99.jpg": {
+    "original": "negative_e63e1607-f344-43d6-a0d8-e10cf2e5054a_png.rf.c6aa2b4bf4f369d5a89ea5de62ff34e8.jpg",
+    "truth": "Negative"
+  },
+  "slide_100.jpg": {
+    "original": "negative_f2b1ae99-8169-42ea-bdb4-3351175e4cb6_jpg.rf.48f16ed9234e905b1d6f9529676f365f.jpg",
+    "truth": "Negative"
+  }
+}
