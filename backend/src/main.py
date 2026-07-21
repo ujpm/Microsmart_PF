@@ -25,7 +25,7 @@ app = FastAPI(title="MicroSmart Enterprise API", version="1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^(https://.*\.pages\.dev|https://.*\.microsmart\.xyz|http://localhost:\d+)$",
+    allow_origin_regex=r"^(https://.*\.pages\.dev|https://.*\.microsmart\.xyz|https://.*\.github\.dev|http://localhost:\d+)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

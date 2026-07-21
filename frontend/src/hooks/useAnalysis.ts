@@ -27,7 +27,7 @@ export const useAnalysis = () => {
     };
   }, []);
 
-  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const API_URL = (import.meta.env.VITE_API_URL || 'https://redesigned-tribble-vxw9599p6qvfvx-8000.app.github.dev').replace(/\/$/, '');
 
   const pollResults = useCallback(async (sessionId: string) => {
     try {
