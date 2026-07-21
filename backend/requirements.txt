@@ -7,10 +7,10 @@ pydantic-settings>=2.2.0
 # Database & Migrations
 SQLAlchemy>=2.0.28
 alembic>=1.13.0
+asyncpg>=0.29.0          # <-- REQUIRED for async PostgreSQL
 psycopg2-binary>=2.9.9
 
 # Computer Vision & Machine Learning
-# --extra-index-url ensures CPU-only PyTorch binaries are fetched
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.2.0
 torchvision>=0.17.0
