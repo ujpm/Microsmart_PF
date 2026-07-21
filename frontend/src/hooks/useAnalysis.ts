@@ -1,11 +1,34 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { API_CONFIG } from '../config';
 
+export interface VisionResult {
+  summary_statistics?: {
+    wbc_count: number;
+    species_breakdown: Record<string, number>;
+    total_parasite_count: number;
+    uninfected_rbc_count: number;
+    total_objects_detected: number;
+    estimated_parasitemia_percent: number;
+  };
+  predictions?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    class: string;
+    class_id: number;
+    confidence: number;
+    color: string;
+  }[];
+  annotated_image?: string;
+  diagnostic_context?: string;
+}
+
 export interface SessionItem {
   id: string;
   originalFile: File;
   status: 'pending' | 'processing' | 'completed' | 'error';
-  result?: any; 
+  result?: VisionResult;
 }
 
 export const useAnalysis = () => {

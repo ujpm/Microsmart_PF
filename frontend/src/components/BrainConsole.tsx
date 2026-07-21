@@ -22,6 +22,13 @@ export const BrainConsole: React.FC<BrainConsoleProps> = ({
     if (report && reportRef.current) reportRef.current.scrollTop = 0;
   }, [report]);
 
+  // Build a simple counts from predictions
+  const counts: Record<string, number> = {};
+  activeSlideData?.predictions?.forEach(p => {
+    const key = p.class;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
   return (
     <div className={`
       relative bg-slate-900 border-l border-slate-800 flex flex-col h-full transition-all duration-300 ease-in-out
@@ -66,37 +73,29 @@ export const BrainConsole: React.FC<BrainConsoleProps> = ({
            ) : (
              <div className="space-y-6">
                 
-                {/* Minimal Counts for the side panel */}
-                <div className="grid grid-cols-2 gap-2">
-                   {Object.entries(activeSlideData.detailed_counts).map(([key, val]) => {
-                      let shortLabel = key.slice(0, 4);
-                      if (key === "RBC" || key === "WBC") shortLabel = key;
-                      else if (key.startsWith("P. ")) {
-                         const parts = key.split(" ");
-                         if (parts.length >= 3) {
-                            shortLabel = `P${parts[1][0]} ${parts[2].slice(0,3)}`; 
-                         }
-                      }
-
+                {/* Minimal Counts from predictions */}
+                {Object.keys(counts).length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(counts).map(([className, val]) => {
+                      let shortLabel = className.slice(0, 8);
                       return (
-                        <div key={key} className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between items-center" title={key}>
+                        <div key={className} className="bg-slate-950 p-2 rounded border border-slate-800 flex justify-between items-center" title={className}>
                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider truncate">
                              {shortLabel}
                            </span>
                            <span className="text-sm font-mono text-cyan-400">{val}</span>
                         </div>
                       )
-                   })}
-                </div>
+                    })}
+                  </div>
+                )}
                 
                 {/* Report Area with Custom Styled Markdown */}
                 <div className="text-sm text-slate-300 leading-relaxed space-y-4">
                    {report ? (
                      <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
-                        // --- THE FIX: Sanitize the string before rendering ---
                         children={report.replace(/</g, '< ').replace(/>/g, '> ')} 
-                        // -----------------------------------------------------
                         components={{
                           h1: ({node, ...props}) => <h1 className="text-lg font-bold text-slate-100 mt-6 mb-2" {...props} />,
                           h2: ({node, ...props}) => <h2 className="text-md font-bold text-cyan-400 mt-5 mb-2 uppercase tracking-wide text-[11px]" {...props} />,

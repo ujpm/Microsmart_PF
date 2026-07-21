@@ -36,7 +36,7 @@ export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
 
   const detectedClasses = useMemo(() => {
     const classes = new Set<string>();
-    predictions.forEach((p: any) => classes.add(p.class_name));
+    predictions.forEach((p) => classes.add(p.class));
     return Array.from(classes);
   }, [predictions]);
 
@@ -114,16 +114,18 @@ export const SmartViewer = ({ activeSlide }: SmartViewerProps) => {
                     }}
                   />
 
-                  {isAiReady && !showOriginal && imgDim.width > 0 && predictions.map((pred: any, idx: number) => {
-                    const left = ((pred.box.x_center - pred.box.width / 2) / imgDim.width) * 100;
-                    const top = ((pred.box.y_center - pred.box.height / 2) / imgDim.height) * 100;
-                    const width = (pred.box.width / imgDim.width) * 100;
-                    const height = (pred.box.height / imgDim.height) * 100;
-                    const config = CLASS_GUIDE[pred.class_name] || CLASS_GUIDE.default;
+                  {isAiReady && !showOriginal && imgDim.width > 0 && predictions.map((pred, idx) => {
+                    // Guard against missing coordinate data
+                    if (pred.x == null) return null;
+                    const left = (pred.x / imgDim.width) * 100;
+                    const top = (pred.y / imgDim.height) * 100;
+                    const width = (pred.width / imgDim.width) * 100;
+                    const height = (pred.height / imgDim.height) * 100;
+                    const config = CLASS_GUIDE[pred.class] || CLASS_GUIDE.default;
 
                     return (
                       <div
-                        key={idx}
+                        key={`pred-${idx}-${pred.class}-${pred.confidence}`}
                         className="absolute border-2 pointer-events-none rounded-sm transition-opacity duration-300"
                         style={{
                           left: `${left}%`, top: `${top}%`, width: `${width}%`, height: `${height}%`,

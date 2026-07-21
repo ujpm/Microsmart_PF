@@ -7,37 +7,37 @@ interface SessionHUDProps {
 }
 
 export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
-  // If no slide is selected at all, hide the HUD
   if (!activeSlide) return null;
 
   const { result, status } = activeSlide;
   const isLoading = !result || status === 'processing';
 
-  // Extract parasitemia percentage safely
-  const pctStr = result?.parasitemia_calculation?.value ?? '0.00%';
+  // Get parasitemia from summary_statistics
+  const pctStr = result?.summary_statistics?.estimated_parasitemia_percent != null
+    ? `${result.summary_statistics.estimated_parasitemia_percent}%`
+    : '0.00%';
   const pctVal = parseFloat(pctStr);
   const isHighRisk = !isNaN(pctVal) && pctVal > 2.0;
 
-  /**
-   * Safely parses species counts from backend analysis.
-   * Defensive against null/undefined count payloads.
-   */
-  const getDetectedSpeciesList = (counts?: Record<string, number>): string => {
-    if (!counts || Object.keys(counts).length === 0) return 'None Detected';
+  // Species from species_breakdown or predictions fallback
+  const speciesBreakdown = result?.summary_statistics?.species_breakdown;
+  const speciesList = speciesBreakdown
+    ? Object.entries(speciesBreakdown)
+        .filter(([, count]) => count > 0)
+        .map(([key]) => {
+          const speciesMap: Record<string, string> = {
+            p_falciparum: 'P. Falciparum',
+            p_vivax: 'P. Vivax',
+            p_malariae: 'P. Malariae',
+            p_ovale: 'P. Ovale',
+          };
+          return speciesMap[key] || key;
+        })
+    : [];
+  const detectedSpecies = speciesList.length > 0 ? speciesList.join(', ') : 'None Detected';
 
-    const speciesSet = new Set<string>();
-    Object.keys(counts).forEach((key) => {
-      const k = key.toLowerCase();
-      if (k.includes('falciparum')) speciesSet.add('P. Falciparum');
-      if (k.includes('vivax')) speciesSet.add('P. Vivax');
-      if (k.includes('malariae')) speciesSet.add('P. Malariae');
-      if (k.includes('ovale')) speciesSet.add('P. Ovale');
-    });
-
-    return speciesSet.size > 0 ? Array.from(speciesSet).join(', ') : 'None Detected';
-  };
-
-  const detectedSpecies = getDetectedSpeciesList(result?.detailed_counts);
+  // Total parasites from summary_statistics or predictions length
+  const totalParasites = result?.summary_statistics?.total_parasite_count ?? result?.predictions?.length ?? 0;
 
   return (
     <div className="h-24 bg-slate-900/80 backdrop-blur-md border-b border-cyan-900/30 flex items-center px-6 justify-between shrink-0 z-40 animate-fade-in-up relative overflow-hidden">
@@ -80,7 +80,7 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
             <BarChart3 size={12} /> Total Load
           </div>
           <div className="text-2xl font-mono font-bold text-slate-200">
-            {isLoading ? '---' : result?.total_parasites ?? 0} <span className="text-sm text-slate-600 font-sans">org/field</span>
+            {isLoading ? '---' : totalParasites} <span className="text-sm text-slate-600 font-sans">org/field</span>
           </div>
         </div>
 

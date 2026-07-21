@@ -8,8 +8,8 @@ interface FilmstripProps {
   onSelect: (index: number) => void;
   isCollapsed: boolean;
   onToggle: () => void;
-  onAddFiles: (files: File[]) => void; // New Prop
-  onDeleteSlide: (id: string) => void; // New Prop
+  onAddFiles: (files: File[]) => void;
+  onDeleteSlide: (id: string) => void;
 }
 
 export const Filmstrip = ({ 
@@ -42,7 +42,6 @@ export const Filmstrip = ({
              >
                <Plus size={12} />
              </button>
-             {/* Hidden Input for Add Button */}
              <input 
                type="file" multiple accept="image/*" 
                className="hidden" ref={fileInputRef} onChange={handleFileChange} 
@@ -61,7 +60,11 @@ export const Filmstrip = ({
       <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
         {session.map((item, idx) => {
           const isSelected = selectedIndex === idx;
-          const hasParasites = (item.result?.total_parasites || 0) > 0;
+          // Use summary_statistics.total_parasite_count or predictions length
+          const totalParasites = item.result?.summary_statistics?.total_parasite_count
+            ?? item.result?.predictions?.length
+            ?? 0;
+          const hasParasites = totalParasites > 0;
           
           return (
             <div 
@@ -80,17 +83,18 @@ export const Filmstrip = ({
                 <div className={`
                   w-3 h-3 rounded-full 
                   ${item.status === 'processing' ? 'bg-cyan-500 animate-pulse' : ''}
-                  ${item.status === 'done' ? (hasParasites ? 'bg-red-500' : 'bg-emerald-500') : ''}
+                  ${item.status === 'completed' ? (hasParasites ? 'bg-red-500' : 'bg-emerald-500') : ''}
                   ${item.status === 'pending' ? 'bg-slate-700' : ''}
+                  ${item.status === 'error' ? 'bg-red-700' : ''}
                 `} />
               ) : (
                 // Expanded View
-                <div className="pr-4"> {/* Padding for Trash icon */}
+                <div className="pr-4">
                    <div className="flex justify-between items-center mb-1">
                      <span className={`text-[10px] font-mono ${isSelected ? 'text-cyan-400' : 'text-slate-500'}`}>
                        #{idx + 1}
                      </span>
-                     {item.status === 'done' && (
+                     {item.status === 'completed' && (
                        <div className={`w-2 h-2 rounded-full ${hasParasites ? 'bg-red-500' : 'bg-emerald-500'}`} />
                      )}
                    </div>
@@ -98,10 +102,10 @@ export const Filmstrip = ({
                      {item.originalFile.name}
                    </div>
 
-                   {/* Delete Button (Visible on Hover) */}
+                   {/* Delete Button */}
                    <button 
                      onClick={(e) => {
-                       e.stopPropagation(); // Don't select the slide when deleting
+                       e.stopPropagation();
                        onDeleteSlide(item.id);
                      }}
                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-slate-600 hover:text-red-400 hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
