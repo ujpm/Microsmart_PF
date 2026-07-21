@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { API_CONFIG } from '../config';
 
 export interface SessionItem {
   id: string;
@@ -23,7 +24,7 @@ export const useAnalysis = () => {
 
   const pollResults = useCallback(async (sessionId: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/results/${sessionId}`);
+      const res = await fetch(`${API_CONFIG.baseUrl}/results/${sessionId}`);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
 
       const data = await res.json();
@@ -72,7 +73,7 @@ export const useAnalysis = () => {
       formData.append('engine', engine);
       formData.append('sample_type', 'malaria');
 
-      const response = await fetch('http://localhost:8000/analyze', {
+      const response = await fetch(`${API_CONFIG.baseUrl}/analyze`, {
         method: 'POST',
         body: formData,
       });

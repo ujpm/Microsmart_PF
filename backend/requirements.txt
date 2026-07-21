@@ -1,35 +1,24 @@
-# Core AI Frameworks
-ultralytics==8.3.0      # The Eye (YOLOv8)
-cerebras_cloud_sdk      # The Brain (Llama 3.3 via Cerebras)
+# Web Framework & Server
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
 
-# Backend API
-fastapi                 # To create the API endpoint
-uvicorn                 # To run the server
-python-multipart        # To handle image uploads
+# Database & Migrations
+SQLAlchemy>=2.0.28
+alembic>=1.13.0
+psycopg2-binary>=2.9.9
 
-# Data Handling
-numpy
-pillow                  # Image processing
-asyncpg                 # PostgreSQL async driver for SQLAlchemy
-sqlalchemy              # ORM and async database support
+# Computer Vision & Machine Learning
+# --extra-index-url ensures CPU-only PyTorch binaries are fetched
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
+torchvision>=0.17.0
+ultralytics>=8.1.0
+opencv-python-headless>=4.9.0.80
+Pillow>=10.2.0
+numpy>=1.26.0
 
-# Vision & ML Models
-roboflow                # Roboflow API for model inference
-
-# PDF Generation
-markdown                # Markdown to HTML conversion
-weasyprint              # PDF rendering from HTML
-
-# The Interface
-streamlit
-python-dotenv
-# Security & Auth
-PyJWT
-
-# Database
-SQLAlchemy
-
-# PDF Report Generation
-weasyprint
-Jinja2
-Markdown
+# Utilities & Security
+python-multipart>=0.0.9
+python-dotenv>=1.0.1

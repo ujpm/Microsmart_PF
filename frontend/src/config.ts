@@ -3,7 +3,7 @@ import logo2 from './assets/logo-2.svg';
 import logo3 from './assets/logo-3.svg';
 
 export const API_CONFIG = {
-  baseUrl: import.meta.env.VITE_API_URL || "http://localhost:8000"
+  baseUrl: import.meta.env.VITE_API_URL || ""
 };
 
 export const BRAND = {

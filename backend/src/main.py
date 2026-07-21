@@ -3,6 +3,7 @@ import shutil
 import uuid
 import logging
 from typing import List
+import asyncio
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -56,7 +57,10 @@ async def process_sample_background(
             
         except Exception as e:
             logger.error(f"Background Processing Failed: {e}")
-            await update_session_status(db, session_id, SessionStatusEnum.FAILED)
+            try:
+                await update_session_status(db, session_id, SessionStatusEnum.FAILED)
+            except Exception:
+                logger.exception("Failed to update session status")
             if os.path.exists(final_image_path): os.remove(final_image_path)
         finally:
             if os.path.exists(temp_filename): os.remove(temp_filename)
@@ -70,16 +74,8 @@ async def analyze_sample(
     db: AsyncSession = Depends(get_db), auth_token: str = Depends(get_current_user_token)
 ):
     if not files: raise HTTPException(status_code=400, detail="No files uploaded")
-    
-    if auth_token:
-        current_user = await get_user_by_auth_id(db, auth_token)
-        if not current_user: raise HTTPException(status_code=401, detail="User not registered")
-    else:
-        current_user = await get_or_create_default_org_and_user(db)
-    
-    db_sample_type = SampleTypeEnum.MALARIA if sample_type.lower() == "malaria" else SampleTypeEnum.OVA_AND_PARASITES
-    session = await create_session(db, current_user.id, current_user.facility_id, db_sample_type)
 
+    session_id = str(uuid.uuid4())
     primary_file = files[0]
     file_id = f"{uuid.uuid4()}_{primary_file.filename}"
     temp_filename = f"temp/{file_id}"
@@ -89,12 +85,31 @@ async def analyze_sample(
     with open(temp_filename, "wb") as buffer:
         shutil.copyfileobj(primary_file.file, buffer)
 
+    try:
+        if auth_token:
+            current_user = await get_user_by_auth_id(db, auth_token)
+            if not current_user:
+                raise HTTPException(status_code=401, detail="User not registered")
+        else:
+            current_user = await get_or_create_default_org_and_user(db)
+
+        db_sample_type = SampleTypeEnum.MALARIA if sample_type.lower() == "malaria" else SampleTypeEnum.OVA_AND_PARASITES
+        session = await create_session(db, current_user.id, current_user.facility_id, db_sample_type)
+        session_id = str(session.id)
+    except Exception as exc:
+        logger.warning(f"Database unavailable during analyze startup: {exc}")
+
     background_tasks.add_task(
-        process_sample_background, session_id=session.id, temp_filename=temp_filename,
+        process_sample_background, session_id=uuid.UUID(session_id), temp_filename=temp_filename,
         final_image_path=final_image_path, image_url=image_url, engine=engine, mode=mode, sample_type=sample_type
     )
 
-    return { "status": "PROCESSING", "message": "Samples queued.", "session_id": str(session.id) }
+    return {
+        "status": "PROCESSING",
+        "message": "Samples queued.",
+        "session_id": session_id,
+        "warning": "Database persistence unavailable; request accepted in fallback mode."
+    }
 
 @app.get("/export/{session_id}")
 async def export_report_pdf(session_id: str, db: AsyncSession = Depends(get_db)):
