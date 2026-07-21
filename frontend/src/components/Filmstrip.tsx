@@ -80,7 +80,7 @@ export const Filmstrip = ({
                 <div className={`
                   w-3 h-3 rounded-full 
                   ${item.status === 'processing' ? 'bg-cyan-500 animate-pulse' : ''}
-                  ${item.status === 'done' ? (hasParasites ? 'bg-red-500' : 'bg-emerald-500') : ''}
+                  ${item.status === 'completed' ? (hasParasites ? 'bg-red-500' : 'bg-emerald-500') : ''}
                   ${item.status === 'pending' ? 'bg-slate-700' : ''}
                 `} />
               ) : (
@@ -90,7 +90,7 @@ export const Filmstrip = ({
                      <span className={`text-[10px] font-mono ${isSelected ? 'text-cyan-400' : 'text-slate-500'}`}>
                        #{idx + 1}
                      </span>
-                     {item.status === 'done' && (
+                     {item.status === 'completed' && (
                        <div className={`w-2 h-2 rounded-full ${hasParasites ? 'bg-red-500' : 'bg-emerald-500'}`} />
                      )}
                    </div>
