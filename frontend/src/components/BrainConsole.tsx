@@ -68,7 +68,7 @@ export const BrainConsole: React.FC<BrainConsoleProps> = ({
                 
                 {/* Minimal Counts for the side panel */}
                 <div className="grid grid-cols-2 gap-2">
-                   {Object.entries(activeSlideData.detailed_counts).map(([key, val]) => {
+                   {Object.entries(activeSlideData.detailed_counts || {}).map(([key, val]) => {
                       let shortLabel = key.slice(0, 4);
                       if (key === "RBC" || key === "WBC") shortLabel = key;
                       else if (key.startsWith("P. ")) {

@@ -10,7 +10,7 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
   if (!activeSlide || !activeSlide.result) return null;
 
   const { result } = activeSlide;
-  const pctStr = result.parasitemia_calculation.value;
+  const pctStr = result.parasitemia_calculation?.value || "N/A";
   const pctVal = parseFloat(pctStr);
   const isHighRisk = !isNaN(pctVal) && pctVal > 2.0;
 
@@ -30,7 +30,7 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({ activeSlide }) => {
     return Array.from(speciesSet).join(", ");
   };
 
-  const detectedSpecies = getDetectedSpeciesList(result.detailed_counts);
+  const detectedSpecies = getDetectedSpeciesList(result.detailed_counts || {});
 
   return (
     <div className="h-24 bg-slate-900/80 backdrop-blur-md border-b border-cyan-900/30 flex items-center px-6 justify-between shrink-0 z-40 animate-fade-in-up relative overflow-hidden">
